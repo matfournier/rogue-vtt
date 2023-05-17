@@ -1,0 +1,122 @@
+* {
+   box-sizing: border-box;
+}
+
+html { height: 100% }
+body {
+   font-family: 'Source Sans Pro', sans-serif;
+   padding: 1em;
+   background: linear-gradient(180deg, #FFF9E4 0%, #EEEED8 100%);
+   display: flex;
+   justify-content: space-around;
+   color: #2f2c48;
+}
+
+.instructions {
+   font-size: 0.8em;
+   color: #aaa;
+   text-align: center;
+   margin:0;
+   margin-bottom: 16px;
+}
+
+.card {
+   background: #fff;
+   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.5);
+   padding-bottom: 16px;
+   header {
+      display:flex;
+      justify-content: space-between;      
+      align-items: center;
+      border-bottom: 1px solid #ddd;
+      margin-bottom:1em;
+      padding: 16px;
+      h1 {
+         margin:0;
+         
+      }
+      
+      .button-as-link {
+         margin-right: 1em;
+      }
+   }
+   aside {
+      padding-left: 16px;
+      padding-right: 16px;
+   }
+}
+.card_body {
+   display:flex;   
+}
+.card_right-column {
+   padding-right: 16px;
+}
+
+canvas {
+   // outline: 1px solid #ddd;
+   background: #f4f8f9;
+}
+
+.tileset-container {
+   position: relative;
+}
+.tileset-container_selection {
+   position:absolute;
+   outline: 3px solid cyan;
+   left:0;
+   top:0;
+   width: 32px;
+   height:32px;
+}
+
+.layers {
+   list-style-type:none;
+   margin:0;
+   padding:0;
+   button {
+      appearance:none;
+      font-family:inherit;
+      outline:0;
+      background:transparent;
+      border:0;
+      padding: 8px 0;
+      // border-bottom:1px solid #ddd;
+      display:block;
+      width: 100%;
+      text-align:left;
+      cursor:pointer;
+   
+      &.active {
+         font-weight:bold;
+         color: #0884f1;
+      }
+   }
+}
+
+.button-as-link {
+   appearance:none;
+   text-decoration: underline;
+   background: transparent;
+   color: #7f808e;
+   border:0;
+   outline:0;
+   cursor:pointer;
+}
+.primary-button {
+   border:0;
+   background: #4e84fa;
+   border-top:4px solid transparent;
+   border-bottom: 4px solid #3166c7;
+   color: #fff;
+   border-radius: 6px;
+   outline:0;
+   padding: 6px 16px;
+   cursor:pointer;
+}
+
+label {
+   text-transform: uppercase;
+   margin-bottom: 0.5em;
+   font-weight: bold;
+   display: block;  
+}

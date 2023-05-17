@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+   <meta charset="UTF-8" />
+   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+   <link rel="stylesheet" href="style.css">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+   <title>WGLT Roguelike Tutorial</title>
+</head>
+
+<body>
+   <!-- <canvas></canvas> -->
+   <script type="module" src="js.js"></script>
+   <div class="card">
+
+      <header>
+         <h1>Tile Map Editor</h1>
+         <div>
+            <button class="button-as-link" onclick="clearCanvas()">Clear Canvas</button>
+            <button class="primary-button" onclick="exportImage()">Export Image</button>
+         </div>
+      </header>
+      <div class="card_body">
+         <aside>
+            <label>Tiles</label>
+            <div class="tileset-container">
+               <img id="tileset-source" crossorigin />
+               <div class="tileset-container_selection"></div>
+            </div>
+         </aside>
+         <div class="card_right-column">
+            <!-- The main canvas -->
+            <canvas width="480" height="480">
+            </canvas>
+            <p class="instructions">
+               <strong>Click</strong> to paint.
+               <strong>Shift+Click</strong> to remove.
+            </p>
+            <!-- UI for layers -->
+            <div>
+               <label>Editing Layer:</label>
+               <ul class="layers">
+                  <li><button onclick="setLayer(2)" class="layer" tile-layer="2">Top Layer</button></li>
+                  <li><button onclick="setLayer(1)" class="layer" tile-layer="1">Middle Layer</button></li>
+                  <li><button onclick="setLayer(0)" class="layer" tile-layer="0">Bottom Layer</button></li>
+               </ul>
+            </div>
+         </div>
+      </div>
+   </div>
+</body>
+
+</html>

@@ -1,0 +1,184 @@
+%name vttfloor
+%prefix TILE
+
+
+%sdir dngn/floor
+
+%weight 6
+grey_dirt0 FLOOR_GREY_DIRT FLOOR_NORMAL
+
+
+# The colourised versions of FLOOR_PEBBLE were made from
+# pebble_gray*.png, by colourising the non-border colour
+# with hues from 28 to 37, sat 54 to 68, lum 7 to 18 in GIMP.
+%desat 31
+pebble_brown0 FLOOR_PEBBLE FLOOR_PEBBLE_LIGHTGRAY
+%resetcol
+
+%variation FLOOR_PEBBLE brown
+%hue 32 30
+# Can't just use %repeat here, as we want the coloured versions.
+pebble_brown0 FLOOR_PEBBLE_BROWN
+%resetcol
+
+%variation FLOOR_PEBBLE blue
+%hue 27 240
+%repeat FLOOR_PEBBLE_BROWN FLOOR_PEBBLE_BLUE
+%resetcol
+
+%variation FLOOR_PEBBLE green
+%hue 240 140
+%repeat FLOOR_PEBBLE_BLUE FLOOR_PEBBLE_GREEN
+%resetcol
+
+%variation FLOOR_PEBBLE red
+%hue 240 0
+%repeat FLOOR_PEBBLE_BLUE FLOOR_PEBBLE_RED
+%resetcol
+
+%variation FLOOR_PEBBLE magenta
+%hue 240 270
+%repeat FLOOR_PEBBLE_BLUE FLOOR_PEBBLE_MAGENTA
+%resetcol
+
+%variation FLOOR_PEBBLE yellow
+%lum 240 7
+%hue 240 50
+%repeat FLOOR_PEBBLE_BLUE FLOOR_PEBBLE_YELLOW
+%resetcol
+
+%variation FLOOR_PEBBLE white
+%lum 0 9
+%repeat FLOOR_PEBBLE_LIGHTGRAY FLOOR_PEBBLE_WHITE
+%resetcol
+
+# Additional variants for D cave layouts
+%lum 27 -3
+
+%repeat FLOOR_PEBBLE_BROWN FLOOR_PEBBLE_DARKBROWN
+%resetcol
+
+mesh0 FLOOR_HALL
+
+mud0 FLOOR_MUD
+
+ice0 FLOOR_ICE
+
+%weight 16
+lair0 FLOOR_LAIR
+
+moss0 FLOOR_MOSS
+
+%weight 10
+bog_green0 FLOOR_SLIME
+
+acidic_floor0 FLOOR_SLIME_ACIDIC
+
+icy_floor0 FLOOR_ICY
+
+salt0 FLOOR_SALT
+%weight 2
+salt1
+
+%weight 5
+sand1 FLOOR_SAND
+
+sandstone_floor0 FLOOR_SANDSTONE
+
+volcanic_floor0 FLOOR_VOLCANIC
+
+crystal_floor0 FLOOR_CRYSTAL_SQUARES
+
+%sdir dngn/floor/grass
+%weight 15
+grass0 FLOOR_GRASS
+
+grass_n HALO_GRASS
+grass_ne
+grass_e
+grass_se
+grass_s
+grass_sw
+grass_w
+grass_nw
+grass_full
+
+%sdir dngn/floor
+floor_nerves0 FLOOR_NERVES FLOOR_NERVES_RED
+
+%variation FLOOR_NERVES lightgray
+%lum 0 5
+%desat 0
+%lum 15 10
+%desat 15
+%desat 17
+%desat 18
+%repeat FLOOR_NERVES FLOOR_NERVES_LIGHTGRAY
+%resetcol
+
+%sdir dngn/floor
+limestone0 FLOOR_LIMESTONE
+
+%sdir dngn/floor
+white_marble0 FLOOR_W_MARBLE
+
+sigil_curve_N_E SIGIL_CURVE_N_E
+sigil_curve_N_W SIGIL_CURVE_N_W
+sigil_curve_S_E SIGIL_CURVE_S_E
+sigil_curve_S_W SIGIL_CURVE_S_W
+sigil_straight_E_W SIGIL_STRAIGHT_E_W
+sigil_straight_N_S SIGIL_STRAIGHT_N_S
+sigil_straight_NE_SW SIGIL_STRAIGHT_NE_SW
+sigil_straight_NW_SE SIGIL_STRAIGHT_NW_SE
+sigil_cross SIGIL_CROSS
+sigil_circle SIGIL_CIRCLE
+sigil_rhombus SIGIL_RHOMBUS
+sigil_Y_N SIGIL_Y
+sigil_Y_S SIGIL_Y_INVERTED
+sigil_Y_E SIGIL_Y_RIGHT
+sigil_Y_W SIGIL_Y_LEFT
+sigil_Y_left SIGIL_Y_LEFTLEANING
+sigil_Y_right SIGIL_Y_RIGHTLEANING
+sigil_algiz_left SIGIL_ALGIZ_LEFT
+sigil_algiz_right SIGIL_ALGIZ_RIGHT
+sigil_wide_E_NW SIGIL_STRAIGHT_E_NW
+sigil_wide_E_SW SIGIL_STRAIGHT_E_SW
+sigil_wide_W_NE SIGIL_STRAIGHT_W_NE
+sigil_wide_W_SE SIGIL_STRAIGHT_W_SE
+sigil_wide_N_SE SIGIL_STRAIGHT_N_SE
+sigil_wide_N_SW SIGIL_STRAIGHT_N_SW
+sigil_wide_S_NE SIGIL_STRAIGHT_S_NE
+sigil_wide_S_NW SIGIL_STRAIGHT_S_NW
+sigil_straight_E_W_NE_NW SIGIL_FOURWAY
+sigil_sharp_E_NE SIGIL_SHARP_E_NE
+sigil_sharp_W_SW SIGIL_SHARP_W_SW
+sigil_straight_E_NE_SW SIGIL_STRAIGHT_E_NE_SW
+
+%weight 10
+green_bones01 FLOOR_GREEN_BONES
+
+%weight 10
+woodground01 FLOOR_WOODGROUND
+
+%weight 10
+frozen0 FLOOR_FROZEN
+
+studio0 FLOOR_STUDIO
+
+endless_salt0 DNGN_ENDLESS_SALT
+
+%sdir dngn/floor
+lava_sea0000 DNGN_LAVA_SEA
+
+%sdir dngn/water
+open_sea DNGN_OPEN_SEA
+
+shallow_water DNGN_SHALLOW_WATER
+
+shallow_water_murky DNGN_SHALLOW_WATER_MURKY
+
+shoals_deep_water0 SHOALS_DEEP_WATER
+
+shoals_shallow_water0 SHOALS_SHALLOW_WATER
+
+woodground01 FLOOR_WOODGROUND

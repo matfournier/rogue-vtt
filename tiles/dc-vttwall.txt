@@ -1,0 +1,169 @@
+%name vttwall 
+%prefix TILE
+%startvalue TILE_FLOOR_MAX floor
+
+%sdir dngn/wall
+
+# Multiple tile definitions are STATIC, that is they may change between
+# saves but are otherwise fixed.
+
+%weight 100
+brick_dark_1_0 WALL_BRICK_DARK_1 WALL_BRICK_DARK WALL_NORMAL
+brick_dark_1_1
+brick_dark_2_11
+
+%weight 100
+brick_brown0 WALL_BRICK WALL_BRICK_BROWN
+brick_brown1
+
+%variation WALL_BRICK lightgray
+%desat 30
+%desat 0
+%lum 0 10
+%repeat WALL_BRICK WALL_BRICK_LIGHTGRAY
+%resetcol
+
+%weight 100
+relief0 WALL_HALL
+relief1
+
+%variation WALL_HALL blue
+%hue 26 240
+%hue 27 240
+%hue 28 240
+%hue 29 240
+%hue 30 240
+%hue 31 240
+%hue 32 240
+%hue 33 240
+relief_brown0 WALL_HALL_BLUE
+relief_brown1
+
+%weight 100
+orc0 WALL_ORC
+orc1
+orc4
+orc5
+
+%weight 100
+slime0 WALL_SLIME
+slime1
+
+%weight 100
+vault_stone00 STONE_WALL_VAULT
+vault_stone01
+vault_stone02
+
+%weight 100
+wall_stone_spider0 STONE_WALL_SPIDER
+wall_stone_spider1
+
+%weight 100
+tomb0 WALL_TOMB
+tomb1
+
+%weight 100
+vault0 WALL_VAULT
+vault1
+
+%weight 100
+wall_flesh0 WALL_FLESH
+wall_flesh1
+
+%weight 100
+studio0 WALL_STUDIO
+studio1
+studio2
+studio3
+studio4
+studio5
+
+%weight 100
+marble_wall1 WALL_MARBLE
+marble_wall2
+
+%weight 100
+sandstone_wall0 WALL_SANDSTONE
+sandstone_wall9
+
+%weight 100
+crystal_wall00 WALL_CRYSTAL_SQUARES
+crystal_wall10
+
+# For the Doroklohe WizLab
+stone_black_marked0 WALL_STONE_BLACK_MARKED
+stone_black_marked1
+stone_black_marked2
+
+undead0 WALL_UNDEAD
+undead1
+
+%weight 30
+catacombs0 WALL_CATACOMBS
+catacombs1
+
+# Coloured metal walls
+mirrored_wall DNGN_MIRROR_WALL
+silver_wall DNGN_SILVER_WALL
+
+%weight 10
+metal_wall0 DNGN_METAL_WALL
+
+stone2_brown0 DNGN_STONE_WALL_BLUE
+stone2_brown1
+
+# Coloured glass walls
+transparent_wall DNGN_TRANSPARENT_WALL DNGN_TRANSPARENT_WALL_CYAN DNGN_FIRST_TRANSPARENT
+
+crystal_wall_green DNGN_CRYSTAL_WALL DNGN_CRYSTAL DNGN_CRYSTAL_GREEN
+
+%variation DNGN_CRYSTAL blue
+crystal_wall_blue DNGN_CRYSTAL_BLUE
+
+%variation DNGN_CRYSTAL cyan
+crystal_wall_cyan DNGN_CRYSTAL_CYAN
+
+%variation DNGN_CRYSTAL red
+crystal_wall_red DNGN_CRYSTAL_RED
+
+%variation DNGN_CRYSTAL magenta
+crystal_wall_magenta DNGN_CRYSTAL_MAGENTA
+
+%variation DNGN_CRYSTAL brown
+crystal_wall_brown DNGN_CRYSTAL_BROWN
+
+%variation DNGN_CRYSTAL lightgray
+crystal_wall_lightgray DNGN_CRYSTAL_LIGHTGRAY
+
+%variation DNGN_CRYSTAL darkgray
+crystal_wall_darkgray DNGN_CRYSTAL_DARKGRAY
+
+%variation DNGN_CRYSTAL lightblue
+crystal_wall_lightblue DNGN_CRYSTAL_LIGHTBLUE
+
+%variation DNGN_CRYSTAL lightgreen
+crystal_wall_lightgreen DNGN_CRYSTAL_LIGHTGREEN
+
+%variation DNGN_CRYSTAL lightcyan
+crystal_wall_lightcyan DNGN_CRYSTAL_LIGHTCYAN
+
+%variation DNGN_CRYSTAL lightred
+crystal_wall_lightred DNGN_CRYSTAL_LIGHTRED
+
+%variation DNGN_CRYSTAL lightmagenta
+crystal_wall_lightmagenta DNGN_CRYSTAL_LIGHTMAGENTA
+
+%variation DNGN_CRYSTAL yellow
+crystal_wall_yellow DNGN_CRYSTAL_YELLOW
+
+%variation DNGN_CRYSTAL white
+crystal_wall_white DNGN_CRYSTAL_WHITE
+
+%sdir dngn/wall
+emerald1 WALL_EMERALD
+emerald2
+
+%weight 20
+bars_red01 WALL_BARS WALL_BARS_RED
+bars_red02
+bars_red03

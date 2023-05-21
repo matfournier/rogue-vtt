@@ -1,14 +1,16 @@
 
 export class Logic {
-//Utility for getting coordinates of mouse click
-//We get these Down (x) and Right (y) but we need to invert them for our coordinate system 
+
 static getTileCoords(x: number, y: number): [number, number] {
-    return [Math.floor(y / 32), Math.floor(x / 32)];
+    return [Math.floor(x / 24), Math.floor(y / 24)];
 }
 
 
-static tileIndex(x: number, y: number): number { 
-    return x * y
-}
+
+// my array indexing is all wrong 
+// static tileIndex(x: number, y: number): number { 
+//     return (x+1) * y
+// }
+
 
 }

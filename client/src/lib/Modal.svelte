@@ -149,7 +149,7 @@
 
     .window {
         position: relative;
-        width: 40rem;
+        width: 52rem;
         max-width: 100%;
         max-height: 100%;
         margin: 2rem auto;
@@ -162,6 +162,7 @@
         position: relative;
         padding: 1rem;
         max-height: calc(100vh - 4rem);
+        /* width: 800px; */
         overflow: auto;
     }
 

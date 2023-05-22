@@ -13,6 +13,7 @@ export class Tilesheet {
     readonly numTiles: number;
     readonly src: HTMLImageElement;
     readonly tilesPerRow: number = 32;
+    readonly tileSize: number = 24;
 
     tiles: Array<{ sx: number, sy: number }> = new Array()
 
@@ -25,6 +26,24 @@ export class Tilesheet {
             let sy: number = Math.floor(i / this.tilesPerRow) * 24
             this.tiles.push({ sx: sx, sy: sy });
         }
+    }
+
+    render(context: CanvasRenderingContext2D): void {
+        this.tiles.forEach((tile, i) => {
+            // let dim = this.gfx.dungeon.tiles[tile]
+            // let [canvasX, canvasY] = this.idxToCoords(i)
+            context.drawImage(
+                this.src,
+                tile.sx,
+                tile.sy,
+                this.tileSize,
+                this.tileSize,
+                tile.sx,
+                tile.sy,
+                this.tileSize,
+                this.tileSize
+            );
+        })
     }
 }
 

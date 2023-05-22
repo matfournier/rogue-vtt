@@ -67,6 +67,11 @@ export class MapState {
         return `${x}-${y}`
     }
 
+    private keyToNumber(s: string): [number, number] {
+        let split = s.split("-");
+        return [parseInt(split[0]), parseInt(split[1])]
+    }
+
     mapIdx(x: number, y: number): number {
         return (y * this.width + x)
     }
@@ -82,9 +87,9 @@ export class MapState {
         // dungeon 
 
         this.dungeon.forEach((tile, i) => {
-            let dim = this.gfx.dungeon.tiles[tile]
-            let src = this.gfx.dungeon.src
-            let [canvasX, canvasY] = this.idxToCoords(i)
+            let dim = this.gfx.dungeon.tiles[tile];
+            let src = this.gfx.dungeon.src;
+            let [canvasX, canvasY] = this.idxToCoords(i);
             context.drawImage(
                 src,
                 dim.sx,
@@ -96,9 +101,27 @@ export class MapState {
                 this.tileSize,
                 this.tileSize
             );
-        })
+        });
 
         // features 
+
+        this.features.forEach((tile, key) => {
+            let dim = this.gfx.feature.tiles[tile];
+            let src = this.gfx.feature.src;
+            let [canvasX, canvasY] = this.keyToNumber(key);
+            context.drawImage(
+                src,
+                dim.sx,
+                dim.sy,
+                this.tileSize,
+                this.tileSize,
+                canvasX * this.tileSize,
+                canvasY * this.tileSize,
+                this.tileSize,
+                this.tileSize
+            );
+        });
+
 
         // actors 
 

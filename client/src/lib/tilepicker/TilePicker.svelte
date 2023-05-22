@@ -1,48 +1,38 @@
 <script>
 	import { getContext } from "svelte";
-	import PopupLong from "./PopupLong.svelte";
-	import Base from "./Base.svelte";
+	import Palette from "./Palette.svelte";
+	import { dungeonTileStore, featureTileStore } from "../stores/UI";
 
-	export let aaa;
+	export let tileSheet;
 
 	const { open } = getContext("simple-modal");
 
-	// let opening = false;
-	// let opened = false;
-	// let closing = false;
-	// let closed = false;
-
-	const showPopupLong = () => {
-		open(PopupLong, { message: "Floors/Walls" });
+	const showFloorWallPicker = () => {
+		open(Palette, {
+			tilesheet: tileSheet.dungeon,
+			height: 6 * 24,
+			icons: tileSheet.icon,
+			store: dungeonTileStore,
+			sheetName: "dungeon",
+		});
 	};
 
-	const showFloorWallPicker = () => {
-		open(Base, { tilesheet: aaa.dungeon });
+	const showFeaturePicker = () => {
+		open(Palette, {
+			tilesheet: tileSheet.feature,
+			height: 2 * 24,
+			icons: tileSheet.icon,
+			store: featureTileStore,
+			sheetName: "feature",
+		});
 	};
 </script>
 
 <section>
-	<!-- <button on:click={showPopup}>Show a popup!</button>
-	<br/> -->
-	<button on:click={showPopupLong}>Temp</button>
-	<br />
 	<button on:click={showFloorWallPicker}>Floors/Walls</button>
 	<br />
-	<!-- <button on:click={showPopupCustom}>Show a customized popup and listen to events!</button>
-	<br/>
-	<button on:click={showDialog}>Show a dialog!</button> -->
-
-	<!-- <div id="state">
-		{#if opening}
-			<p>opening modal...</p>
-		{:else if opened}
-			<p>opened modal!</p>
-		{:else if closing}
-			<p>closing modal...</p>
-		{:else if closed}
-			<p>closed modal!</p>
-		{/if}
-	</div> -->
+	<button on:click={showFeaturePicker}>Features</button>
+	<br />
 </section>
 
 <style>

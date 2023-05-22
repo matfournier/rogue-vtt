@@ -1,11 +1,16 @@
 <script>
+	import { onDestroy } from "svelte";
 	import { onMount } from "svelte";
-	import { Logic } from "./logic/logic";
+	import { Grid } from "./domain/Grid";
 	import Toolbar from "./Toolbar.svelte";
 	import { MapState } from "./domain/DungeonMap";
 	import TilePicker from "./tilepicker/TilePicker.svelte";
 	import Modal from "./Modal.svelte";
-	import { tilesheets } from "./domain/Tilesheet";
+	import {
+		dungeonTileStore,
+		featureTileStore,
+		selectedTileStore,
+	} from "./stores/UI";
 
 	// https://svelte.dev/repl/434e0b14546747688401e8808c060a23?version=3.47.0
 
@@ -19,11 +24,25 @@
 	export let height = dimensions[1] * tileSize;
 	export let tileSheet;
 
-	// temp
-	const aaa = tileSheet;
-	// temp
-
 	export let background = "#fff";
+
+	// turn all this palette stuff into a class
+
+	let paletteDungeon;
+	let paletteFeature;
+	let paletteSelected;
+
+	const stores = {
+		dungeon: dungeonTileStore.subscribe((value) => {
+			paletteDungeon = value;
+		}),
+		feature: featureTileStore.subscribe((value) => {
+			paletteFeature = value;
+		}),
+		selected: selectedTileStore.subscribe((value) => {
+			paletteSelected = value;
+		}),
+	};
 
 	const defaultCanvas = (tile) => {
 		const tiledBackgroundCanvas = document.createElement("canvas");
@@ -55,7 +74,7 @@
 
 	onMount(() => {
 		selectedMapTile = [0, 0];
-		// tileSheet = await tilesheets();
+
 		map = new MapState(dimensions[0], dimensions[1], tileSheet);
 		let defaultTile = tileSheet.dungeon.tiles[101];
 		context = canvas.getContext("2d");
@@ -68,9 +87,11 @@
 		drawTile();
 	});
 
-	const getTileSheets = () => {
-		return tilesheets;
+	const teardown = () => {
+		stores.entries.forEach((unsub) => unsub());
 	};
+
+	onDestroy(teardown);
 
 	function onKeyDown(e) {
 		console.log(e.key);
@@ -94,42 +115,38 @@
 
 	const handleStart = ({ offsetX: x, offsetY: y }) => {
 		// let [xx, yy] = Logic.getTileCoords(x, y);
-		console.log(
-			`click x: ${selectedMapTile[0]}, y: ${selectedMapTile[1]}, tile: ${tIdx}, tile: ${tileIndex}`
-		);
-		map.addDungeon(selectedMapTile[0], selectedMapTile[1], tileIndex);
+
+		addTileFromPalette(selectedMapTile);
 		drawTile();
 	};
 
+	const addTileFromPalette = (xy) => {
+		if (paletteSelected.sheet === "dungeon") {
+			console.log(
+				`dungeon click x: ${selectedMapTile[0]}, y: ${selectedMapTile[1]}, tile: ${paletteSelected.idx}`
+			);
+			map.addDungeon(xy[0], xy[1], paletteSelected.idx);
+		} else if (paletteSelected.sheet === "feature") {
+			console.log(
+				`feature click x: ${selectedMapTile[0]}, y: ${selectedMapTile[1]}, tile: ${paletteSelected.idx}`
+			);
+			map.addFeature(xy[0], xy[1], paletteSelected.idx);
+		} else {
+			console.log("ERROR: CANNOT ADD TILE TO MAP");
+		}
+	};
+
 	const drawTile = () => {
-		// this doesn't fire when you reload the page.
-		context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-
-		// NOT TRIGGERING WHEN YOU RELOAD
 		context.fillRect(0, 0, context.canvas.width, context.canvas.height);
-
 		map.render(context);
-
-		// handle drawing UI elements
-
-		context.drawImage(
-			tileSheet.icon.sheet.src,
-			tileSheet.icon.cursor().sx,
-			tileSheet.icon.cursor().sy,
-			tileSize,
-			tileSize,
-			selectedMapTile[0] * 24,
-			selectedMapTile[1] * 24,
-			tileSize,
-			tileSize
-		);
+		tileSheet.icon.renderCursor(context, selectedMapTile);
 	};
 
 	const handleEnd = () => {};
 
 	const handleMove = ({ offsetX: x1, offsetY: y1 }) => {
-		let maybeNewTile = Logic.getTileCoords(x1, y1);
-		console.log(`handleMove: ${maybeNewTile[0]} ${maybeNewTile[1]}`);
+		let maybeNewTile = Grid.getTileCoords(x1, y1);
+		// console.log(`handleMove: ${maybeNewTile[0]} ${maybeNewTile[1]}`);
 		if (
 			selectedMapTile[0] != maybeNewTile[0] ||
 			selectedMapTile[1] != maybeNewTile[1]
@@ -183,5 +200,5 @@
 </div>
 <Toolbar bind:tileIdx={tileIndex} />
 <Modal>
-	<TilePicker {aaa} />
+	<TilePicker {tileSheet} />
 </Modal>

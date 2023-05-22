@@ -117,7 +117,11 @@
                     <button on:click={close} class="close" />
                 {/if}
                 <div class="content" style={cssContent}>
-                    <svelte:component this={Component} {...props} />
+                    <svelte:component
+                        this={Component}
+                        on:forceClose={close}
+                        {...props}
+                    />
                 </div>
             </div>
         </div>
@@ -155,7 +159,7 @@
         margin: 2rem auto;
         color: black;
         border-radius: 0.5rem;
-        background: white;
+        background: black;
     }
 
     .content {

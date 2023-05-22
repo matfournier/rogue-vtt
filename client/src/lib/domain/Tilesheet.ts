@@ -50,14 +50,29 @@ export class Tilesheet {
 export class Icons {
     readonly sheet: Tilesheet
 
-    private cursorIdx: number = 0
+    private cursorIdx: number = 0;
+    private tileSize: number = 24;
 
     constructor(ts: Tilesheet) {
-        this.sheet = ts
+        this.sheet = ts;
     }
 
     cursor(): { sx: number, sy: number } {
         return { "sx": this.cursorIdx * 24, "sy": 0 }
+    }
+
+    renderCursor(context: CanvasRenderingContext2D, xy: [number, number]): void {
+        context.drawImage(
+            this.sheet.src,
+            0,
+            0,
+            this.tileSize,
+            this.tileSize,
+            xy[0] * this.tileSize,
+            xy[1] * this.tileSize,
+            this.tileSize,
+            this.tileSize
+        );
     }
 
 }

@@ -1,21 +1,21 @@
 {
-  "name": "wglt-roguelike-tutorial",
+  "name": "client",
+  "private": true,
   "version": "0.0.0",
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
-    "typescript": "4.7.4",
-    "vite": "2.9.13",
-    "wglt": "^0.5.1"
-  },
-  "prettier": {
-    "printWidth": 120,
-    "singleQuote": true
-  },
-  "dependencies": {
-    "fastiles": "^2.1.0"
+    "@sveltejs/vite-plugin-svelte": "^2.0.3",
+    "@tsconfig/svelte": "^4.0.1",
+    "svelte": "^3.57.0",
+    "svelte-check": "^2.10.3",
+    "tslib": "^2.5.0",
+    "typescript": "^5.0.2",
+    "vite": "^4.3.2"
   }
 }

@@ -1,0 +1,28 @@
+%prefix TILEI
+%name vtticon 
+%startvalue TILEG_GUI_MAX gui
+
+%back none
+
+%sdir misc
+cursor CURSOR
+cursor_red CURSOR2
+cursor_green CURSOR3
+tutorial_cursor TUTORIAL_CURSOR
+travel_exclusion DISABLED
+
+%sdir misc
+travel_exclusion TRAVEL_EXCLUSION_FG
+travel_exclusion_centre TRAVEL_EXCLUSION_CENTRE_FG
+
+%sdir misc/numbers
+num0 NUM0
+num1 NUM1
+num2 NUM2
+num3 NUM3
+num4 NUM4
+num5 NUM5
+num6 NUM6
+num7 NUM7
+num8 NUM8
+num9 NUM9

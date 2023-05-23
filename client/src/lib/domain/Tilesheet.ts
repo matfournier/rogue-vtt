@@ -1,5 +1,5 @@
 import floorWallPng from '../../assets/vttfloorsandwalls24x24.png'
-import featurePng from '../../assets/vttfeat24x24.png'
+import featurePng from '../../assets/features24x24.png'
 import iconPng from '../../assets/vtticon24x24.png'
 
 
@@ -86,7 +86,7 @@ export async function tilesheets(): Promise<Tilesheets> {
     {
         "name": "feature",
         "src": featurePng,
-        "numTiles": 72
+        "numTiles": 64
     },
     {
         "name": "icons",

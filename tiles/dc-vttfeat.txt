@@ -1,107 +1,26 @@
 %name vttfeat
 %prefix TILE
-%startvalue TILE_WALL_MAX wall
-
-%weight 10
-%sdir dngn/trees
-tree1 DNGN_TREE
-tree2
-tree3
-tree4
-
-%variation DNGN_TREE brown
-tree_dead1 DNGN_TREE_DEAD
-tree_dead2
 
 %sdir dngn/doors
 closed_door DNGN_CLOSED_DOOR
 open_door DNGN_OPEN_DOOR
 broken_door DNGN_BROKEN_DOOR
 
-%sdir dngn/statues
-statue_mermaid
-%syn DNGN_STATUE_MERMAID
-statue_wraith
-%syn DNGN_STATUE_WRAITH
-statue_imp
-%syn DNGN_STATUE_IMP
-statue_orb
-%syn DNGN_STATUE_ORB
-
-# damaged statues
-%weight 1
-crumbled_column_1 DNGN_CRUMBLED_COLUMN
-
-## Features only used in certain minivaults
-%sdir dngn/vaults
-
-## Reworked statues for Zonguldrok Wizlab: gravestones
-gravestone_blank DNGN_GRAVESTONE
-
-# start TAG_MAJOR_VERSION == 34
-teleporter_ice_cave DNGN_TELEPORTER_ICE_CAVE
-# end TAG_MAJOR_VERSION
-
-## golden statues for the holy Pan level
-golden_statue_1 DNGN_GOLDEN_STATUE
-golden_statue_2
-
-## sarcophagus for ragdoll_tomb_raider
-sarcophagus_sealed DNGN_SARCOPHAGUS_SEALED
-
-## sideways sarcophagi for tomb:1
-sarcophagus_pedestal_left DNGN_SARCOPHAGUS_PEDESTAL_LEFT
-sarcophagus_pedestal_right DNGN_SARCOPHAGUS_PEDESTAL_RIGHT
-
-%sdir dngn/traps
-## traps
-dart DNGN_TRAP_DART
-net DNGN_TRAP_NET
-dispersal DNGN_TRAP_DISPERSAL
-teleport DNGN_TRAP_TELEPORT
-teleport_permanent DNGN_TRAP_TELEPORT_PERMANENT
-
-cobweb_none_0 DNGN_TRAP_WEB
-
 ## stairs
 %sdir dngn/gateways
 exit_dungeon DNGN_EXIT_DUNGEON
 stone_stairs_down DNGN_STONE_STAIRS_DOWN
+stone_stairs_up DNGN_STONE_STAIRS_UP
 
 %sdir dngn/gateways
 enter_shoals DNGN_ENTER_SHOALS
 enter_elf DNGN_ENTER_ELF
 enter_abyss1 DNGN_ENTER_ABYSS
 exit_abyss DNGN_EXIT_ABYSS
-portal DNGN_PORTAL
-bazaar_portal DNGN_PORTAL_BAZAAR
 zig_portal DNGN_PORTAL_ZIGGURAT
 desolation_portal DNGN_PORTAL_DESOLATION
-
-%sdir dngn/altars
-zin DNGN_ALTAR_ZIN
-shining_one DNGN_ALTAR_SHINING_ONE
-kikubaaqudgha DNGN_ALTAR_KIKUBAAQUDGHA
-yredelemnul DNGN_ALTAR_YREDELEMNUL
-vehumet1 DNGN_ALTAR_VEHUMET
-okawaru DNGN_ALTAR_OKAWARU
-sif_muna1 DNGN_ALTAR_SIF_MUNA
-makhleb_flame1 DNGN_ALTAR_MAKHLEB
 
 %sdir dngn/floor
 runelight0 DNGN_RUNELIGHT
 runelight1
 
-%sdir dngn
-blue_fountain DNGN_FOUNTAIN DNGN_BLUE_FOUNTAIN
-blood_fountain DNGN_BLOOD_FOUNTAIN
-dry_fountain DNGN_DRY_FOUNTAIN
-
-%sdir misc/blood
-blood_red00 BLOOD
-blood_red01
-wall_blood00_s WALL_BLOOD_S
-wall_blood01_s
-wall_blood03_s
-wall_blood00_w WALL_BLOOD_W
-wall_blood00_n WALL_BLOOD_N

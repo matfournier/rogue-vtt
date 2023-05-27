@@ -37,8 +37,19 @@ export class SquareCounter {
         console.log(this)
     }
 
+    public lim(xy: [number, number]): void {
+        this.maxX = xy[0]
+        this.maxY = xy[1]
+
+    }
+
     bounds(): Bounds {
-        return { x: [this.minX, this.maxX], y: [this.minY, this.maxY] }
+        const xmin = Math.min(this.minX, this.maxX);
+        const xmax = Math.max(this.minX, this.maxX);
+        const ymin = Math.min(this.minY, this.maxY);
+        const ymax = Math.max(this.minY, this.maxY);
+
+        return { x: [xmin, xmax], y: [ymin, ymax] }
     }
 
     tiles(): Array<[number, number]> {
@@ -48,5 +59,23 @@ export class SquareCounter {
             }
         }
         return this.squareTiles
+    }
+    tilesLim(): Array<[number, number]> {
+        const xmin = Math.min(this.minX, this.maxX);
+        const xmax = Math.max(this.minX, this.maxX);
+        const ymin = Math.min(this.minY, this.maxY);
+        const ymax = Math.max(this.minY, this.maxY);
+
+        let res: Array<[number, number]> = new Array()
+
+        for (let i = xmin; i <= xmax; i++) {
+            for (let j = ymin; j <= ymax; j++) {
+                res.push([i, j]);
+            }
+        }
+
+        return res
+
+
     }
 }

@@ -4,7 +4,9 @@
 	import { Grid, SquareCounter } from "../domain/Grid";
 	import Toolbar from "../Toolbar.svelte";
 	import { MapState } from "../domain/DungeonMap";
-	import TilePicker from "../tilepicker/TilePicker.svelte";
+	import TilePicker from "../popups/TilePicker.svelte";
+	import EntityPicker from "../popups/EntityPicker.svelte";
+
 	import Modal from "../Modal.svelte";
 	import {
 		dungeonTileStore,
@@ -56,6 +58,9 @@
 	let selectedMapTile;
 	let map;
 	let t, l;
+
+	// has modal from a text box I think.
+	//	https://svelte.dev/repl/b95ce66b0ef34064a34afc5c0249f313?version=3.59.1
 
 	const defaultCanvas = (tile) => {
 		const tiledBackgroundCanvas = document.createElement("canvas");
@@ -133,7 +138,7 @@
 	const handleStart = () => {
 		clickBounds = new SquareCounter(selectedMapTile);
 		if (mouseMode.get().major === "NONE") {
-			mouseMode.setSelection();
+			mouseMode.setRange();
 		}
 	};
 
@@ -183,7 +188,16 @@
 
 		context.font = "18pt Monospace";
 		context.fillStyle = "grey";
-		context.fillText("1", 6, 18);
+		context.fillText("A", 40 * 24, 18 * 24);
+		context.fillText("B", 42 * 24, 20 * 24);
+
+		context.fillStyle = "yellow";
+
+		context.fillText("g", 44 * 24, 19 * 24);
+		context.fillText("g", 42 * 24, 21 * 24);
+		context.fillText("g", 40 * 24, 21 * 24);
+		context.fillText("g", 42 * 24, 22 * 24);
+
 		context.fillStyle = pattern;
 	};
 
@@ -191,8 +205,8 @@
 	const handleEnd = () => {
 		// console.log(tiles);
 		let mode = mouseMode.get();
-		if (mode.major === "SELECTION") {
-			let tiles = clickBounds.tiles();
+		if (mode.major === "RANGE") {
+			let tiles = clickBounds.tilesLim();
 			if (mode.minor === "DRAW") {
 				tiles.forEach((tile) => addTileFromPalette(tile));
 			} else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
@@ -209,35 +223,27 @@
 	};
 
 	const handleMove = ({ offsetX: x1, offsetY: y1 }) => {
-		let maybeNewTile = Grid.getTileCoords(x1, y1);
-		// console.log(`handleMove: ${maybeNewTile[0]} ${maybeNewTile[1]}`);
-		if (
-			selectedMapTile[0] != maybeNewTile[0] ||
-			selectedMapTile[1] != maybeNewTile[1]
-		) {
-			selectedMapTile = maybeNewTile;
-			let mode = mouseMode.get();
-			if (mode.major === "SELECTION") {
-				clickBounds.count(maybeNewTile);
-				let bounds = clickBounds.bounds();
-				draw();
-
-				// this doesn't quite work, it flickers a ton.
-				// need to make another class that is handling this OR NOTHING
-				// in the drawTile
-				context.fillStyle = "blue";
-				context.globalAlpha = 0.25;
-				context.fillRect(
-					bounds.x[0] * 24,
-					bounds.y[0] * 24,
-					bounds.x[1] * 24 + 24 - bounds.x[0] * 24,
-					bounds.y[1] * 24 + 24 - bounds.y[0] * 24
-				);
-				context.fillStyle = pattern;
-				context.globalAlpha = 1;
-			}
-		} else {
+		selectedMapTile = Grid.getTileCoords(x1, y1);
+		draw();
+		let mode = mouseMode.get();
+		if (mode.major === "RANGE") {
+			clickBounds.lim(selectedMapTile);
+			let bounds = clickBounds.bounds();
 			draw();
+
+			// this doesn't quite work, it flickers a ton.
+			// need to make another class that is handling this OR NOTHING
+			// in the drawTile
+			context.fillStyle = "blue";
+			context.globalAlpha = 0.25;
+			context.fillRect(
+				bounds.x[0] * 24,
+				bounds.y[0] * 24,
+				bounds.x[1] * 24 + 24 - bounds.x[0] * 24,
+				bounds.y[1] * 24 + 24 - bounds.y[0] * 24
+			);
+			context.fillStyle = pattern;
+			context.globalAlpha = 1;
 		}
 	};
 
@@ -282,4 +288,8 @@
 <Toolbar bind:tileIdx={tileIndex} />
 <Modal>
 	<TilePicker {tileSheet} />
+</Modal>
+
+<Modal>
+	<EntityPicker />
 </Modal>

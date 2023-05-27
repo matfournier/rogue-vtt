@@ -2,7 +2,18 @@
 export type Mode = {
     major: string
     minor: string
+    meta: string
 }
+
+
+// TODO going to need a SELECT mode and TARGET mode 
+// this is so we can select a tile -> pick an enemy (or spawn a model when there is more than one enemy in a tile)
+// and then MOVE them some how 
+// also for spawning so we can spawn and move 
+// maybe the NONE mode should really be SELECT? 
+
+
+// when something IS selected, should be able to move it around w/ vim keys or arrow keys imho
 
 export class MouseMode {
 
@@ -10,7 +21,7 @@ export class MouseMode {
 
     constructor() {
         this.mode =
-            { major: "NONE", minor: "DRAW" }
+            { major: "NONE", minor: "DRAW", meta: "" }
     }
 
     get(): Mode {
@@ -29,8 +40,8 @@ export class MouseMode {
         this.mode.minor = "CLEARALL"
     }
 
-    setSelection(): void {
-        this.mode.major = "SELECTION"
+    setRange(): void {
+        this.mode.major = "RANGE"
     }
 
     setMoving(): void {
@@ -39,6 +50,6 @@ export class MouseMode {
 
     reset(): void {
         this.mode =
-            { major: "NONE", minor: "DRAW" }
+            { major: "NONE", minor: "DRAW", meta: "" }
     }
 }

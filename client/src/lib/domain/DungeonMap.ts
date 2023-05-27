@@ -1,13 +1,17 @@
+import type { Entity } from "./EntityRenderer";
 import { type Tilesheets } from "./Tilesheet";
 
+
+// should we have a second tileset where we invert the grid border so people can see the grid more easily
+// or should we be able to draw it using the canvas a series of lines? 
+//   ^-- try this. 
 
 export class MapState {
     private height: number;
     private width: number;
     private dungeon: Array<number>;
     private features: Map<string, number>; // 24-24, 127
-    private actors: Map<string, number>; // but how do I identify actors?
-    private players: Map<string, number>; // not sure, maybe have 
+
     private gfx: Tilesheets;
     private readonly tileSize: number;
     // actors be Map<string, Array<number>> ? 
@@ -17,8 +21,7 @@ export class MapState {
         this.width = columns;
         this.dungeon = Array(columns * rows)
         this.features = new Map<string, number>();
-        this.actors = new Map<string, number>();
-        this.players = new Map<string, number>();
+
         this.gfx = tileSheets;
         this.tileSize = 24;
     }
@@ -39,29 +42,6 @@ export class MapState {
         this.features.delete(this.key(x, y))
     }
 
-    addActor(x: number, y: number, tileIndex: number) {
-        this.addActorIdx(this.key(x, y), tileIndex);
-    }
-
-    private addActorIdx(idx: string, tileIndex: number): void {
-        this.actors.set(idx, tileIndex);
-    }
-
-    removeActor(x: number, y: number): void {
-        let idx: string = `${x}-${y}`
-        this.removeActorIdx(this.key(x, y));
-    }
-
-    private removeActorIdx(idx: string): void {
-        this.actors.delete(idx)
-    }
-
-    moveActor(fromX: number, fromY: number, toX: number, toY: number) {
-        let idx: string = `${fromX}-${fromY}`
-        let actorTile: number = this.actors[idx];
-        this.removeActorIdx(idx)
-        this.addActorIdx(this.key(toX, toY), actorTile)
-    }
 
     private key(x: number, y: number): string {
         return `${x}-${y}`

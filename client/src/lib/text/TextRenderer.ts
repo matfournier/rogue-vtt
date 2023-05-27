@@ -1,9 +1,4 @@
-
-export type Glyph = {
-    c: string,
-    x: number,
-    y: number,
-}
+import type { Entity } from "../domain/EntityRenderer";
 
 export class TextRender {
     readonly px;
@@ -29,14 +24,15 @@ export class TextRender {
     // token and list of hexes 
     // will also need to filter tokens to only show what is visible in the camera 
     // only renders the main canvas 
-    render(context: CanvasRenderingContext2D, colour: string, tokens: Array<Glyph>): void {
+    render(context: CanvasRenderingContext2D, colour: string, tokens: Array<[Entity, [number, number]]>): void {
         let originalFillStyle = context.fillStyle;
-        context.font = this.font
-        tokens.forEach(token => {
+        context.fillStyle = colour;
+        context.font = this.font;
+        tokens.forEach(elem => {
+            let [token, [x, y]] = elem;
             // ideally I'm not calculating this every frame, but it's static until the camera moves? 
-            context.fillText(token.c, (token.x * this.tileSize) + this.delta_x, (token.y * this.tileSize) + this.delta_x)
+            context.fillText(token.c, (x * this.tileSize) + this.delta_x, (y * this.tileSize) + this.delta_x)
         })
+        context.fillStyle = originalFillStyle
     }
-
-    // need to have a way to render a sidebar 
 }

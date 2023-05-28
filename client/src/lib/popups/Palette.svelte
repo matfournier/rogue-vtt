@@ -12,7 +12,6 @@
 	export let height;
 	export let tilesheet;
 	export let icons;
-	export let store;
 	export let sheetName;
 
 	let canvas;
@@ -31,7 +30,6 @@
 	const handleStart = ({ offsetX: x, offsetY: y }) => {
 		selectedTileIdx =
 			selectedTileXY[1] * (width / tileSize) + selectedTileXY[0];
-		store.set({ sheet: sheetName, idx: selectedTileIdx });
 		selectedTileStore.set({ sheet: sheetName, idx: selectedTileIdx });
 		close();
 	};

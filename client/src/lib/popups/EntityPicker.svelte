@@ -1,7 +1,5 @@
 <script>
     import { getContext } from "svelte";
-    // import Palette from "./Palette.svelte";
-    import { dungeonTileStore, featureTileStore } from "../stores/UI";
     import EntityForm from "./EntityForm.svelte";
 
     export let entities;

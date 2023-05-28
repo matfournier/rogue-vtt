@@ -1,7 +1,6 @@
 <script>
 	import { getContext } from "svelte";
 	import Palette from "./Palette.svelte";
-	import { dungeonTileStore, featureTileStore } from "../stores/UI";
 
 	export let tileSheet;
 
@@ -12,7 +11,6 @@
 			tilesheet: tileSheet.dungeon,
 			height: 6 * 24,
 			icons: tileSheet.icon,
-			store: dungeonTileStore,
 			sheetName: "dungeon",
 		});
 	};
@@ -22,7 +20,6 @@
 			tilesheet: tileSheet.feature,
 			height: 2 * 24,
 			icons: tileSheet.icon,
-			store: featureTileStore,
 			sheetName: "feature",
 		});
 	};

@@ -7,18 +7,13 @@
 	import TilePicker from "../popups/TilePicker.svelte";
 	import EntityPicker from "../popups/EntityPicker.svelte";
 	import { modal } from "../stores/UI";
-	import { bind } from "../Modal.svelte";
 	import EntityForm from "../popups/EntityForm.svelte";
+	import { bind } from "../Modal.svelte";
 
 	import Modal from "../Modal.svelte";
-	import {
-		dungeonTileStore,
-		featureTileStore,
-		selectedTileStore,
-	} from "../stores/UI";
+	import { selectedTileStore } from "../stores/UI";
 	import { MouseMode } from "./MouseMode";
-	import { xlink_attr } from "svelte/internal";
-	import { EntityState } from "../domain/EntityRenderer";
+	import { EntityState, EntityType } from "../domain/EntityRenderer";
 
 	// https://svelte.dev/repl/434e0b14546747688401e8808c060a23?version=3.47.0
 
@@ -36,22 +31,12 @@
 
 	let pattern;
 
-	// turn all this palette stuff into a class
-
-	let paletteDungeon;
-	let paletteFeature;
 	let paletteSelected;
 
 	const mouseMode = new MouseMode();
 	let clickBounds; // when someone clicks, decide if you should try a single or multiple tile
 
 	const stores = {
-		dungeon: dungeonTileStore.subscribe((value) => {
-			paletteDungeon = value;
-		}),
-		feature: featureTileStore.subscribe((value) => {
-			paletteFeature = value;
-		}),
 		selected: selectedTileStore.subscribe((value) => {
 			paletteSelected = value;
 		}),
@@ -63,6 +48,7 @@
 	let map;
 	let entities;
 	let t, l;
+	let mapFocus = true;
 
 	// has modal from a text box I think.
 	//	https://svelte.dev/repl/b95ce66b0ef34064a34afc5c0249f313?version=3.59.1
@@ -97,54 +83,82 @@
 		context = canvas.getContext("2d");
 		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
 		context.fillStyle = pattern;
+		context.font = "18pt Monospace";
 		handleSize();
 		draw();
 	});
 
 	const teardown = () => {
-		stores.entries.forEach((unsub) => unsub());
+		stores.forEach((unsub, k) => unsub());
 	};
 
 	onDestroy(teardown);
 
 	function onKeyDown(e) {
-		console.log(e.key);
-		switch (e.keyCode) {
-			case 27: // esc
-				modeReset();
-				draw();
-				break;
+		if (mapFocus) {
+			console.log(e.key);
+			switch (e.keyCode) {
+				case 27: // esc
+					modeReset();
+					draw();
+					break;
+			}
 		}
 	}
 
 	function onKeyUp(e) {
-		switch (e.keyCode) {
-			case 88: // esc
-				mouseMode.reset();
-				break;
-			case 65: // a
-				modal.set(
-					bind(EntityForm, {
-						entities: entities,
-					})
-				);
-				break;
+		if (mapFocus) {
+			switch (e.keyCode) {
+				case 88: // esc
+					mouseMode.reset();
+					break;
+				case 65: // a
+					mapFocus = false;
+					modal.set(
+						bind(EntityForm, {
+							entities: entities,
+							xy: selectedMapTile,
+							entityType: EntityType.PLAYER,
+							callback: () => {
+								mapFocus = true;
+								draw();
+							},
+						})
+					);
+					break;
+				case 69: // e
+					mapFocus = false;
+					modal.set(
+						bind(EntityForm, {
+							entities: entities,
+							xy: selectedMapTile,
+							entityType: EntityType.NPC,
+							callback: () => {
+								mapFocus = true;
+								draw();
+							},
+						})
+					);
+					break;
+			}
 		}
 	}
 
 	function onKeyHeld(e) {
-		switch (e.keyCode) {
-			// could you implement defining a region and then hitting "delete" to delete it if in no mode?
-			// if you are in mode NONE I think this would work the best?
-			// this is hacky for now.
+		if (mapFocus) {
+			switch (e.keyCode) {
+				// could you implement defining a region and then hitting "delete" to delete it if in no mode?
+				// if you are in mode NONE I think this would work the best?
+				// this is hacky for now.
 
-			case 88: // x
-				if (e.shiftKey) {
-					mouseMode.setMinorClear();
-				} else {
-					mouseMode.setMinorClearAll();
-				}
-				break;
+				case 88: // x
+					if (e.shiftKey) {
+						mouseMode.setMinorClear();
+					} else {
+						mouseMode.setMinorClearAll();
+					}
+					break;
+			}
 		}
 	}
 
@@ -196,6 +210,7 @@
 	const draw = () => {
 		context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 		map.render(context);
+		entities.render(context);
 
 		tileSheet.icon.renderCursor(context, selectedMapTile);
 

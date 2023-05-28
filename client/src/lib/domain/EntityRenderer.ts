@@ -69,19 +69,19 @@ class Stack {
         return this;
     }
 
-    stackTypeFromEntityType(entity: Entity): StackType {
+    private stackTypeFromEntityType(entity: Entity): StackType {
         return (entity.type === EntityType.PLAYER ? StackType.PLAYER : StackType.NPC)
     }
 
-    getStackType(stack: Array<Entity>): StackType {
+    private getStackType(stack: Array<Entity>): StackType {
         if (stack.length === 1) {
             return this.stackTypeFromEntityType(stack[0])
         } else {
             let type: Set<EntityType> = new Set(stack.map(e => e.type))
-            let l = type.values.length
-            if (l === 1 && type.values[0] === EntityType.PLAYER) {
+            let l = type.size
+            if (l === 1 && type.has(EntityType.PLAYER)) {
                 return StackType.PLAYERS
-            } else if (l === 1 && type.values[0] === EntityType.NPC) {
+            } else if (l === 1 && type.has(EntityType.NPC)) {
                 return StackType.NPCS
             } else {
                 return StackType.BOTH
@@ -105,11 +105,14 @@ export class EntityState {
         this.labels = new Map()
         this.colours = new Map()
         this.state = new EntityRenderer(this.colours, this.labels)
-        this.colours.set("PC", "light-grey")
-        this.colours.set("NPC", "yellow")
+        this.colours.set("0", "blue") // pc 
+        this.colours.set("1", "white") // pcs 
+        this.colours.set("2", "yellow") // npc 
+        this.colours.set("3", "orange") // npcs
+        this.colours.set("4", "red") // both
     }
 
-    updateLabels(c: string, description: string) {
+    updateLabel(c: string, description: string) {
         this.labels.set(c, description)
     }
 
@@ -135,6 +138,9 @@ export class EntityState {
     //         stack.stack.forEach((entity) => )
     //     )
     // }
+    render(context: CanvasRenderingContext2D) {
+        this.state.render(context)
+    }
 }
 
 export class EntityRenderer {
@@ -144,8 +150,8 @@ export class EntityRenderer {
 
     constructor(colours: Map<string, string>, labels: Map<string, string>) {
         this.map = new Map()
-        this.labels = new Map()
-        this.colours = new Map()
+        this.labels = labels;
+        this.colours = colours;
     }
 
     put(e: Entity, x: number, y: number): void {
@@ -161,6 +167,11 @@ export class EntityRenderer {
 
     key(x: number, y: number): string {
         return `${x}-${y}`
+    }
+
+    idx(s: string): [number, number] {
+        const split = s.split("-")
+        return [parseInt(split[0]), parseInt(split[1])]
     }
 
     remove(e: Entity, x: number, y: number): void {
@@ -186,5 +197,28 @@ export class EntityRenderer {
         })
     }
 
-    // needs a render method 
+    render(context: CanvasRenderingContext2D): void {
+        let palette = context.fillStyle
+
+        this.map.forEach((stack, coords) => {
+            const xy = this.idx(coords)
+            let colour = this.colours.get(stack.stackType.toString())
+            context.fillStyle = colour
+            context.fillText(stack.c, (xy[0] * 24) + 4, (xy[1] * 24) + 19)
+        })
+
+        context.fillStyle = palette
+
+        // context.fillStyle = "grey";
+        // context.fillText("A", 40 * 24, 18 * 24);
+        // context.fillText("B", 42 * 24, 20 * 24);
+
+        // context.fillStyle = "yellow";
+
+        // context.fillText("g", 44 * 24, 19 * 24);
+        // context.fillText("g", 42 * 24, 21 * 24);
+        // context.fillText("g", 40 * 24, 21 * 24);
+        // context.fillText("g", 42 * 24, 22 * 24);
+
+    }
 }

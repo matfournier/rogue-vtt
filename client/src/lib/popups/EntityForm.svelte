@@ -1,14 +1,12 @@
 <script>
     import { getContext } from "svelte";
-    // import { entityStateCb } from "../stores/UI";
-
+    import { onDestroy } from "svelte";
     const { close } = getContext("simple-modal");
 
     export let entities;
     export let entityType;
-
-    // we are going to have pass a callback back to main app.
-    // can I use a dispatcher again?
+    export let xy;
+    export let callback;
 
     function onSubmit(e) {
         const formData = new FormData(e.target);
@@ -18,23 +16,46 @@
             const [key, value] = field;
             data[key] = value;
         }
-        if (data.c !== undefined || data.c !== "") {
-            // I want to construct a callback here
-            // I don't know where the thing is being spawned yet
-            // so I can't add this entity yet
+
+        if (data.character.length === 1 && data.description !== "") {
+            let entity = {
+                c: data.character,
+                type: entityType,
+                id: Math.floor(Date.now() + Math.random() * 2000000).toString,
+            };
+            entities.updateLabel(data.character, data.description);
+            entities.addEntity(entity, xy[0], xy[1]);
         }
-        console.log(data);
         close();
     }
+
+    const bar = (e) => {
+        if (e === 0) {
+            return "PLAYER";
+        } else {
+            return "NPC";
+        }
+    };
+
+    const title = bar(entityType);
+
+    onDestroy(() => {
+        callback();
+    });
 </script>
 
 <!-- // https://www.thisdot.co/blog/handling-forms-in-svelte/ // need to figure out -->
 <!-- how to render the characters that are already here -->
 
-<form on:submit|preventDefault={onSubmit}>
+<form
+    on:submit|preventDefault={onSubmit}
+    on:close={callback}
+    autocomplete="off"
+>
+    <h2>{title}</h2>
     <div>
         <label for="name">Character</label>
-        <input type="text" id="character" name="character" value="" />
+        <input type="text" id="character" name="character" value="" autofocus />
     </div>
     <div>
         <label for="name">Description</label>

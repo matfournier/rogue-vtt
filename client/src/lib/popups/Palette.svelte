@@ -1,10 +1,10 @@
 <script>
 	import { onMount } from "svelte";
 	import { Grid } from "../domain/Grid";
-	import { createEventDispatcher } from "svelte";
 	import { selectedTileStore } from "../stores/UI";
+	import { getContext } from "svelte";
 
-	const dispatch = createEventDispatcher();
+	const { close } = getContext("simple-modal");
 
 	let tileSize = 24;
 
@@ -33,7 +33,7 @@
 			selectedTileXY[1] * (width / tileSize) + selectedTileXY[0];
 		store.set({ sheet: sheetName, idx: selectedTileIdx });
 		selectedTileStore.set({ sheet: sheetName, idx: selectedTileIdx });
-		dispatch("forceClose", { state: true });
+		close();
 	};
 
 	const handleMove = ({ offsetX: x1, offsetY: y1 }) => {

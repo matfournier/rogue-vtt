@@ -90,12 +90,59 @@ class Stack {
     }
 }
 
+// export type FullySpecifiedEntitiy {
+//     entity: Entity
+//     position: [number, number]
+//     label: string
+// }
+
+export class EntityState {
+    state: EntityRenderer
+    labels: Map<string, string>
+    colours: Map<string, string>
+
+    constructor() {
+        this.labels = new Map()
+        this.colours = new Map()
+        this.state = new EntityRenderer(this.colours, this.labels)
+        this.colours.set("PC", "light-grey")
+        this.colours.set("NPC", "yellow")
+    }
+
+    updateLabels(c: string, description: string) {
+        this.labels.set(c, description)
+    }
+
+    addEntity(entity: Entity, x: number, y: number) {
+        this.state.put(entity, x, y)
+    }
+
+    removeEntityAt(entity: Entity, x: number, y: number) {
+        this.state.remove(entity, x, y)
+    }
+
+    removeAll(entity: Entity) {
+        this.state.removeAll(entity)
+        this.labels.delete(entity.c)
+    }
+
+    updateColours(type: string, colour: string) {
+        this.colours.set(type, colour)
+    }
+    // entityDetails(): Array<FullySpecifiedEntitiy> {
+    //     let res: Array<FullySpecifiedEntitiy> = new Array()
+    //     this.state.map.forEach((stack, coord) =>
+    //         stack.stack.forEach((entity) => )
+    //     )
+    // }
+}
+
 export class EntityRenderer {
     map: Map<string, Stack>
     labels: Map<string, string> // "g" -> "goblin"
     colours: Map<string, string> // "npc" -> colour 
 
-    constructor(colours: Map<string, string>, labels: Map<string, string) {
+    constructor(colours: Map<string, string>, labels: Map<string, string>) {
         this.map = new Map()
         this.labels = new Map()
         this.colours = new Map()

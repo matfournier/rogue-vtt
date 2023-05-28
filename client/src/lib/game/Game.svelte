@@ -6,6 +6,9 @@
 	import { MapState } from "../domain/DungeonMap";
 	import TilePicker from "../popups/TilePicker.svelte";
 	import EntityPicker from "../popups/EntityPicker.svelte";
+	import { modal } from "../stores/UI";
+	import { bind } from "../Modal.svelte";
+	import EntityForm from "../popups/EntityForm.svelte";
 
 	import Modal from "../Modal.svelte";
 	import {
@@ -15,6 +18,7 @@
 	} from "../stores/UI";
 	import { MouseMode } from "./MouseMode";
 	import { xlink_attr } from "svelte/internal";
+	import { EntityState } from "../domain/EntityRenderer";
 
 	// https://svelte.dev/repl/434e0b14546747688401e8808c060a23?version=3.47.0
 
@@ -57,6 +61,7 @@
 	let context;
 	let selectedMapTile;
 	let map;
+	let entities;
 	let t, l;
 
 	// has modal from a text box I think.
@@ -87,6 +92,7 @@
 	onMount(() => {
 		selectedMapTile = [0, 0];
 		map = new MapState(dimensions[0], dimensions[1], tileSheet);
+		entities = new EntityState();
 		let defaultTile = tileSheet.dungeon.tiles[101];
 		context = canvas.getContext("2d");
 		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
@@ -115,6 +121,13 @@
 		switch (e.keyCode) {
 			case 88: // esc
 				mouseMode.reset();
+				break;
+			case 65: // a
+				modal.set(
+					bind(EntityForm, {
+						entities: entities,
+					})
+				);
 				break;
 		}
 	}
@@ -286,10 +299,10 @@
 	/>
 </div>
 <Toolbar bind:tileIdx={tileIndex} />
-<Modal>
+<Modal show={$modal}>
 	<TilePicker {tileSheet} />
 </Modal>
 
 <Modal>
-	<EntityPicker />
+	<EntityPicker {entities} />
 </Modal>

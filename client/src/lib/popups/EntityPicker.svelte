@@ -2,12 +2,17 @@
     import { getContext } from "svelte";
     // import Palette from "./Palette.svelte";
     import { dungeonTileStore, featureTileStore } from "../stores/UI";
+    import EntityForm from "./EntityForm.svelte";
 
-    // export let tileSheet;
+    export let entities;
 
     const { open } = getContext("simple-modal");
 
-    const showPlayerPicker = () => {};
+    const showPlayerPicker = () => {
+        open(EntityForm, {
+            entities: entities,
+        });
+    };
 
     const showerOtherPicker = () => {};
 

@@ -14,6 +14,7 @@
 	import { selectedTileStore } from "../stores/UI";
 	import { MouseMode } from "./MouseMode";
 	import { EntityState, EntityType } from "../domain/EntityRenderer";
+	import { ViewHandler } from "./Interaction";
 
 	// https://svelte.dev/repl/434e0b14546747688401e8808c060a23?version=3.47.0
 
@@ -22,6 +23,8 @@
 
 	const tileSize = 24;
 	let dimensions = [50, 25];
+
+	const interfaceHandler = new ViewHandler();
 
 	export let width = dimensions[0] * tileSize;
 	export let height = dimensions[1] * tileSize;
@@ -107,10 +110,26 @@
 	}
 
 	function onKeyUp(e) {
+		interfaceHandler.onKeyUp(e);
 		if (mapFocus) {
 			switch (e.keyCode) {
+				case 8: // delete
+					// when minor mode has a selected entity, delete it?
+					// you have the entity id to delete we could probably implement this
+					break;
+				case 49: // 1
+					// todo launch the floor/wall picker
+					break;
+				case 50: // 2
+					// todo launch the feature pickler
+					break;
 				case 88: // esc
 					mouseMode.reset();
+					mapFocus = true;
+					break;
+				case 83: // s
+					mouseMode.setSelection();
+					draw();
 					break;
 				case 65: // a
 					mapFocus = false;
@@ -147,10 +166,6 @@
 	function onKeyHeld(e) {
 		if (mapFocus) {
 			switch (e.keyCode) {
-				// could you implement defining a region and then hitting "delete" to delete it if in no mode?
-				// if you are in mode NONE I think this would work the best?
-				// this is hacky for now.
-
 				case 88: // x
 					if (e.shiftKey) {
 						mouseMode.setMinorClear();
@@ -163,9 +178,27 @@
 	}
 
 	const handleStart = () => {
-		clickBounds = new SquareCounter(selectedMapTile);
-		if (mouseMode.get().major === "NONE") {
-			mouseMode.setRange();
+		if (mouseMode.get().major !== "SELECTION") {
+			clickBounds = new SquareCounter(selectedMapTile);
+			if (mouseMode.get().major === "NONE") {
+				mouseMode.setRange();
+			}
+		} else {
+			// you are in selection mode
+
+			if (mouseMode.get().minor === "TARGET") {
+				// we are placing a tile
+			} else {
+				let stack = entities.list(
+					selectedMapTile[0],
+					selectedMapTile[1]
+				);
+				// we are selecting a tile
+				// if nothing there -> mode reset
+				// if we click on something
+				//   if there is one entity
+				//   if there is more than one entity open up dialog box to select which one
+			}
 		}
 	};
 
@@ -212,7 +245,11 @@
 		map.render(context);
 		entities.render(context);
 
-		tileSheet.icon.renderCursor(context, selectedMapTile);
+		if (mouseMode.get().major !== "SELECTION") {
+			tileSheet.icon.renderCursor(context, selectedMapTile);
+		} else {
+			tileSheet.icon.renderSelectionCursor(context, selectedMapTile);
+		}
 
 		context.font = "18pt Monospace";
 		context.fillStyle = "grey";
@@ -229,7 +266,6 @@
 		context.fillStyle = pattern;
 	};
 
-	// mouse up && when someone leaves the screen, need to think about this.
 	const handleEnd = () => {
 		// console.log(tiles);
 		let mode = mouseMode.get();

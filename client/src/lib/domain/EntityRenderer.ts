@@ -7,7 +7,7 @@ export enum EntityType {
 export type Entity = {
     c: string
     type: EntityType
-    id: string
+    id: string // TODO this should come from the server/.
 }
 
 
@@ -97,7 +97,7 @@ class Stack {
 // }
 
 export class EntityState {
-    state: EntityRenderer
+    private state: EntityRenderer
     labels: Map<string, string>
     colours: Map<string, string>
 
@@ -110,6 +110,10 @@ export class EntityState {
         this.colours.set("2", "yellow") // npc 
         this.colours.set("3", "orange") // npcs
         this.colours.set("4", "red") // both
+    }
+
+    list(x: number, y: number): Stack | undefined {
+        return this.state.map.get(this.state.key(x, y))
     }
 
     updateLabel(c: string, description: string) {
@@ -169,7 +173,7 @@ export class EntityRenderer {
         return `${x}-${y}`
     }
 
-    idx(s: string): [number, number] {
+    private idx(s: string): [number, number] {
         const split = s.split("-")
         return [parseInt(split[0]), parseInt(split[1])]
     }

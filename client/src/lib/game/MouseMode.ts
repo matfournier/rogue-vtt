@@ -1,3 +1,4 @@
+import type { Entity } from "../domain/EntityRenderer";
 
 export type Mode = {
     major: string
@@ -6,14 +7,13 @@ export type Mode = {
 }
 
 
-// TODO going to need a SELECT mode and TARGET mode 
-// this is so we can select a tile -> pick an enemy (or spawn a model when there is more than one enemy in a tile)
-// and then MOVE them some how 
-// also for spawning so we can spawn and move 
-// maybe the NONE mode should really be SELECT? 
+// refactor why not make this functional. 
 
+// mousemode gives three functions: 
+// onset 
+// onstart
+// onend 
 
-// when something IS selected, should be able to move it around w/ vim keys or arrow keys imho
 
 export class MouseMode {
 
@@ -46,6 +46,17 @@ export class MouseMode {
 
     setMoving(): void {
         this.mode.major = "MOVING"
+    }
+
+    setSelection() {
+        this.mode.major = "SELECTION"
+        this.mode.minor = "NOTARGET"
+    }
+    setSelectionSelected(entity: Entity) {
+        if (this.mode.major === "SELECTION") {
+            this.mode.minor = "TARGET"
+            this.mode.meta = entity.id
+        }
     }
 
     reset(): void {

@@ -17,6 +17,7 @@
             data[key] = value;
         }
 
+        // todo: move entity ID to a call to the server?
         if (data.character.length === 1 && data.description !== "") {
             let entity = {
                 c: data.character,

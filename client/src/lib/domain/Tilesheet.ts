@@ -4,8 +4,8 @@ import iconPng from '../../assets/vtticon24x24.png'
 
 
 export type Tilesheets = {
-    dungeon: Tilesheet
-    feature: Tilesheet
+    dungeon: Tilesheet // 0
+    feature: Tilesheet // 1
     icon: Icons
 }
 
@@ -75,6 +75,19 @@ export class Icons {
         );
     }
 
+    renderSelectionCursor(context: CanvasRenderingContext2D, xy: [number, number]): void {
+        context.drawImage(
+            this.sheet.src,
+            24,
+            0,
+            this.tileSize,
+            this.tileSize,
+            xy[0] * this.tileSize,
+            xy[1] * this.tileSize,
+            this.tileSize,
+            this.tileSize
+        );
+    }
 }
 
 export async function tilesheets(): Promise<Tilesheets> {

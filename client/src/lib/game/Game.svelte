@@ -15,6 +15,7 @@
 	import { MouseMode } from "./MouseMode";
 	import { EntityState, EntityType } from "../domain/EntityRenderer";
 	import { ViewHandler } from "./Interaction";
+	import { Camera } from "./Camera";
 
 	// https://svelte.dev/repl/434e0b14546747688401e8808c060a23?version=3.47.0
 
@@ -22,12 +23,11 @@
 	$: tileIndex = tIdx;
 
 	const tileSize = 24;
-	let dimensions = [50, 25];
+	const mapSize = [200, 200];
+	const cameraDimensions = [100, 50];
 
-	const interfaceHandler = new ViewHandler();
-
-	export let width = dimensions[0] * tileSize;
-	export let height = dimensions[1] * tileSize;
+	export let width = (cameraDimensions[0] / 2) * tileSize;
+	export let height = (cameraDimensions[1] / 2) * tileSize;
 	export let tileSheet;
 
 	export let background = "#fff";
@@ -45,6 +45,8 @@
 		}),
 	};
 
+	let interfaceHandler;
+	let camera;
 	let canvas;
 	let context;
 	let selectedMapTile;
@@ -80,7 +82,16 @@
 
 	onMount(() => {
 		selectedMapTile = [0, 0];
-		map = new MapState(dimensions[0], dimensions[1], tileSheet);
+		camera = new Camera(
+			[selectedMapTile[0], selectedMapTile[1]],
+			cameraDimensions[0],
+			cameraDimensions[1],
+			mapSize[0],
+			mapSize[1]
+		);
+		interfaceHandler = new ViewHandler(camera, tileSheet.icons);
+
+		map = new MapState(mapSize[0], mapSize[1], tileSheet, camera);
 		entities = new EntityState();
 		let defaultTile = tileSheet.dungeon.tiles[101];
 		context = canvas.getContext("2d");
@@ -250,18 +261,6 @@
 		} else {
 			tileSheet.icon.renderSelectionCursor(context, selectedMapTile);
 		}
-
-		context.font = "18pt Monospace";
-		context.fillStyle = "grey";
-		context.fillText("A", 40 * 24, 18 * 24);
-		context.fillText("B", 42 * 24, 20 * 24);
-
-		context.fillStyle = "yellow";
-
-		context.fillText("g", 44 * 24, 19 * 24);
-		context.fillText("g", 42 * 24, 21 * 24);
-		context.fillText("g", 40 * 24, 21 * 24);
-		context.fillText("g", 42 * 24, 22 * 24);
 
 		context.fillStyle = pattern;
 	};

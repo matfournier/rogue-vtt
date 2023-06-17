@@ -1,5 +1,7 @@
 import type { Entity, EntityType } from "../domain/EntityRenderer"
 import type { Bounds } from "../domain/Grid"
+import type { Icons } from "../domain/Tilesheet"
+import type { Camera } from "./Camera"
 
 export enum EventType {
     DISPLAY,
@@ -19,7 +21,8 @@ export enum ActionType {
 }
 
 export enum UActionType {
-    Reset
+    Reset,
+    IgnoreKeyboard
 }
 
 export type TilePlacedAction = {
@@ -80,6 +83,10 @@ export type ResetUAction = {
     kind: UActionType.Reset
 }
 
+export type IgnoreKeyboard = {
+    kind: UActionType.IgnoreKeyboard
+}
+
 export type UAction = ResetUAction
 
 export type DisplayEvent = {
@@ -121,35 +128,48 @@ export interface InteractionHandler {
 }
 
 export class ViewHandler implements InteractionHandler {
+    camera: Camera;
+    cursor: [number, number];
+    icons: Icons;
+
+    constructor(camera: Camera, icons: Icons) {
+        this.camera = camera
+        this.icons = icons;
+    }
+
     onClick?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+        this.camera.onMove(xy);
+        return [];
     }
     onMove?(xy: [number, number]): Event[] {
         // should cover popup/tooltip type things when you hover over things 
-        throw new Error("Method not implemented.")
+        // otherwise just the cursor
+        this.cursor = xy;
+        return [];
     }
     onEnd?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
     onKeyDown(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
-        console.log(`ViewHandler saw ${e.code}`);
-        switch (e.code) {
-            case "KeyG":
-                console.log("saw keyG");
-                break;
-        }
+        // vim keys for moving around 
+
+        // console.log(`ViewHandler saw ${e.code}`);
+        // switch (e.code) {
+        //     case "KeyG":
+        //         console.log("saw keyG");
+        //         break;
+        // }
         return [];
-        throw new Error("Method not implemented.")
     }
     onKeyPressed(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
     render(context: CanvasRenderingContext2D): void {
+        this.icons.renderCursor(context, this.cursor);
         // can render cursor and popups in this thing 
-
     }
 
 }

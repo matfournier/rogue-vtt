@@ -2,6 +2,9 @@ import type { Entity, EntityType } from "../domain/EntityRenderer"
 import type { Bounds } from "../domain/Grid"
 import type { Icons } from "../domain/Tilesheet"
 import type { Camera } from "./Camera"
+import { MouseMode } from "./MouseMode"
+import { SquareCounter } from "../domain/Grid"
+import type { SelectedTile } from "../domain/SelectedTile"
 
 export enum EventType {
     DISPLAY,
@@ -118,28 +121,29 @@ Reset event
 */
 
 export interface InteractionHandler {
-    onClick?(xy: [number, number]): Array<Event>
+    onClick?(xy: [number, number]): void
     onMove?(xy: [number, number]): Array<Event>
     onEnd?(xy: [number, number]): Array<Event>
     onKeyDown(e: KeyboardEvent): Array<Event>
     onKeyUp(e: KeyboardEvent): Array<Event>
     onKeyPressed(e: KeyboardEvent): Array<Event>
     render(context: CanvasRenderingContext2D): void
+    update(selectedTile: SelectedTile): void
 }
 
 export class ViewHandler implements InteractionHandler {
     camera: Camera;
-    cursor: [number, number];
+    cursor: [number, number]; // where is this coming from! 
     icons: Icons;
 
-    constructor(camera: Camera, icons: Icons) {
+    constructor(camera: Camera, icons: Icons, cursor: [number, number]) {
         this.camera = camera
         this.icons = icons;
+        this.cursor = cursor
     }
 
-    onClick?(xy: [number, number]): Event[] {
+    onClick?(xy: [number, number]): void {
         this.camera.onMove(xy);
-        return [];
     }
     onMove?(xy: [number, number]): Event[] {
         // should cover popup/tooltip type things when you hover over things 
@@ -154,14 +158,22 @@ export class ViewHandler implements InteractionHandler {
         return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
-        // vim keys for moving around 
-
-        // console.log(`ViewHandler saw ${e.code}`);
-        // switch (e.code) {
-        //     case "KeyG":
-        //         console.log("saw keyG");
-        //         break;
-        // }
+        // todo vim keys for moving around 
+        // TODO updating cursor after moving (should emit a CursorUpdate event or something?)
+        switch (e.code) {
+            case "ArrowDown": // down arrow
+                this.camera.down();
+                break;
+            case "ArrowUp": // up arrow
+                this.camera.up();
+                break;
+            case "ArrowLeft": // left arrow
+                this.camera.left();
+                break;
+            case "ArrowRight": // right arrow
+                this.camera.right();
+                break;
+        }
         return [];
     }
     onKeyPressed(e: KeyboardEvent): Event[] {
@@ -172,18 +184,54 @@ export class ViewHandler implements InteractionHandler {
         // can render cursor and popups in this thing 
     }
 
+    update(selectedTile: SelectedTile): void { }
+
+
 }
 
 export class DrawHandler implements InteractionHandler {
-    onClick?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+
+    mouseMode: MouseMode;
+    clickBounds: SquareCounter;
+    selectedTile: SelectedTile;
+
+
+    constructor(selectedTile: SelectedTile) {
+        this.mouseMode = new MouseMode();
+        this.selectedTile = selectedTile;
+    }
+
+    onClick?(xy: [number, number]): void {
+        if (this.mouseMode.get().major !== "SELECTION") {
+            this.clickBounds = new SquareCounter(xy)
+            if (this.mouseMode.get().major === "NONE") {
+                this.mouseMode.setRange();
+            }
+        }
     }
     onMove?(xy: [number, number]): Event[] {
         throw new Error("Method not implemented.")
     }
     onEnd?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+        let mode = this.mouseMode.get();
+        if (mode.major === "RANGE") {
+            let bounds = this.clickBounds.bounds();
+            if (mode.minor === "DRAW") {
+                let action: FillAction = {
+                    kind: ActionType.Fill,
+                    bounds: bounds,
+                    tileset: this.getTileLayer(),
+                    idx: this.selectedTile.idx
+                }
+                return new Array({ type: EventType.GAME, action: action })
+                // return a bunch of create tiles events 
+            } else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
+                // return a bunch of clear tile events 
+                return [];
+            }
+        }
     }
+
     onKeyDown(e: KeyboardEvent): Event[] {
         throw new Error("Method not implemented.")
     }
@@ -194,6 +242,17 @@ export class DrawHandler implements InteractionHandler {
         throw new Error("Method not implemented.")
     }
     render(context: CanvasRenderingContext2D): void { }
+
+    getTileLayer(): number {
+        if (this.selectedTile.sheet === "dungeon") {
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+    update(selectedTile: SelectedTile): void {
+        this.selectedTile = selectedTile;
+    }
 
 }
 
@@ -218,5 +277,7 @@ export class MoveHandler implements InteractionHandler {
     }
 
     render(context: CanvasRenderingContext2D): void { }
+
+    update(selectedTile: SelectedTile): void { }
 
 }

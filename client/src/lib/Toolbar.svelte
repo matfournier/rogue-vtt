@@ -1,5 +1,7 @@
 <script>
-	export let tileIdx = 97
+	export let tilePos;
 </script>
 
-<input type="number" placeholder="97" bind:value={tileIdx} />
+<div>
+	<p>{tilePos}</p>
+</div>

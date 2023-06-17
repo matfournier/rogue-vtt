@@ -24,10 +24,10 @@
 
 	const tileSize = 24;
 	const mapSize = [200, 200];
-	const cameraDimensions = [100, 50];
+	const cameraDimensions = [50, 26];
 
-	export let width = (cameraDimensions[0] / 2) * tileSize;
-	export let height = (cameraDimensions[1] / 2) * tileSize;
+	export let width = cameraDimensions[0] * tileSize;
+	export let height = cameraDimensions[1] * tileSize;
 	export let tileSheet;
 
 	export let background = "#fff";
@@ -35,6 +35,7 @@
 	let pattern;
 
 	let paletteSelected;
+	let interfaceHandler;
 
 	const mouseMode = new MouseMode();
 	let clickBounds; // when someone clicks, decide if you should try a single or multiple tile
@@ -42,10 +43,12 @@
 	const stores = {
 		selected: selectedTileStore.subscribe((value) => {
 			paletteSelected = value;
+			if (interfaceHandler !== undefined) {
+				interfaceHandler.update(value);
+			}
 		}),
 	};
 
-	let interfaceHandler;
 	let camera;
 	let canvas;
 	let context;
@@ -169,6 +172,23 @@
 							},
 						})
 					);
+					break;
+				case 40: // down arrow
+					console.log(selectedMapTile);
+					camera.down();
+					draw();
+					break;
+				case 38: // up arrow
+					camera.up();
+					draw();
+					break;
+				case 37: // left arrow
+					camera.left();
+					draw();
+					break;
+				case 39: // right arrow
+					camera.right();
+					draw();
 					break;
 			}
 		}
@@ -348,7 +368,7 @@
 		}}
 	/>
 </div>
-<Toolbar bind:tileIdx={tileIndex} />
+<Toolbar bind:tilePos={selectedMapTile} />
 <Modal show={$modal}>
 	<TilePicker {tileSheet} />
 </Modal>

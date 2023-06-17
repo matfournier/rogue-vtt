@@ -79,8 +79,8 @@ export class MapState {
                         tileSprite.sy,
                         this.tileSize,
                         this.tileSize,
-                        x * this.tileSize,
-                        y * this.tileSize,
+                        (x - this.camera.leftX) * this.tileSize,
+                        (y - this.camera.topY) * this.tileSize,
                         this.tileSize,
                         this.tileSize
                     );
@@ -95,8 +95,8 @@ export class MapState {
                         tileSprite.sy,
                         this.tileSize,
                         this.tileSize,
-                        x * this.tileSize,
-                        y * this.tileSize,
+                        (x - this.camera.leftX) * this.tileSize,
+                        (y - this.camera.topY) * this.tileSize,
                         this.tileSize,
                         this.tileSize
                     );

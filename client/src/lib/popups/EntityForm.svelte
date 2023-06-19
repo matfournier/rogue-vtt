@@ -1,12 +1,16 @@
 <script>
     import { getContext } from "svelte";
     import { onDestroy } from "svelte";
+    import { EntityType } from "../domain/EntityRenderer";
+    import { entityEventStore } from "../stores/UI";
+    import { ActionType, EventType } from "../game/Interaction";
     const { close } = getContext("simple-modal");
 
     export let entities;
-    export let entityType;
     export let xy;
     export let callback;
+    let characterValue = "";
+    let tokens = 1;
 
     function onSubmit(e) {
         const formData = new FormData(e.target);
@@ -21,24 +25,40 @@
         if (data.character.length === 1 && data.description !== "") {
             let entity = {
                 c: data.character,
-                type: entityType,
-                id: Math.floor(Date.now() + Math.random() * 2000000).toString,
+                type: entityType(data.token),
+                id: Math.floor(Date.now() + Math.random() * 2000000).toString, // move serverside
             };
-            entities.updateLabel(data.character, data.description);
-            entities.addEntity(entity, xy[0], xy[1]);
+
+            // todo: differentiate between entities that already exist and those that don't
+            let labelAction = {
+                kind: ActionType.TokenDescription,
+                side: entityType(data.token),
+                token: data.character,
+                desc: data.description,
+            };
+
+            let entityAction = {
+                kind: ActionType.AddToken,
+                entity: entity,
+                xy: xy,
+            };
+
+            let gameEvents = [];
+            gameEvents.push({ type: EventType.GAME, action: labelAction });
+            gameEvents.push({ type: EventType.GAME, action: entityAction });
+
+            entityEventStore.set(gameEvents);
         }
         close();
     }
 
-    const bar = (e) => {
-        if (e === 0) {
-            return "PLAYER";
+    const entityType = (s) => {
+        if (s === "0") {
+            return EntityType.PLAYER;
         } else {
-            return "NPC";
+            return EntityType.NPC;
         }
     };
-
-    const title = bar(entityType);
 
     onDestroy(() => {
         callback();
@@ -53,10 +73,27 @@
     on:close={callback}
     autocomplete="off"
 >
-    <h2>{title}</h2>
+    <div>
+        <label>
+            <input type="radio" bind:group={tokens} name="token" value={0} />
+            Player Token
+        </label>
+
+        <label>
+            <input type="radio" bind:group={tokens} name="token" value={1} />
+            NPC Token
+        </label>
+    </div>
     <div>
         <label for="name">Character</label>
-        <input type="text" id="character" name="character" value="" autofocus />
+        <input
+            type="text"
+            id="character"
+            name="character"
+            bind:value={characterValue}
+            on:input={() => (characterValue = characterValue.substring(0, 1))}
+            autofocus
+        />
     </div>
     <div>
         <label for="name">Description</label>

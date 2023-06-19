@@ -25,7 +25,19 @@ export enum ActionType {
 
 export enum UActionType {
     Reset,
-    IgnoreKeyboard
+    IgnoreKeyboard,
+    RestoreKeyboard,
+    PopupDungeon,
+    PopupFeature,
+    ChangeInteraction,
+    PlaceToken,
+    Ignore
+}
+
+export enum InteractionType {
+    View,
+    Draw,
+    Place
 }
 
 export type TilePlacedAction = {
@@ -56,12 +68,14 @@ export type ClearAction = {
 
 export type AddTokenAction = {
     kind: ActionType.AddToken
-    entity: Entity
+    entity: Entity,
+    xy: [number, number]
 }
 
 export type TokenDescriptionAction = {
     kind: ActionType.TokenDescription
     side: EntityType
+    token: string
     desc: string
 }
 
@@ -90,7 +104,35 @@ export type IgnoreKeyboard = {
     kind: UActionType.IgnoreKeyboard
 }
 
-export type UAction = ResetUAction
+export type RestoreKeyboard = {
+    kind: UActionType.RestoreKeyboard
+}
+
+export type PopupDungeon = {
+    kind: UActionType.PopupDungeon
+}
+
+export type PopupFeature = {
+    kind: UActionType.PopupFeature
+}
+
+export type ChangeInteraction = {
+    kind: UActionType.ChangeInteraction
+    value: InteractionType
+}
+
+export type PlaceTokenPopup = {
+    kind: UActionType.PlaceToken
+    xy: [number, number]
+}
+
+export type IgnoreAction = {
+    kind: UActionType.Ignore
+}
+
+export type UAction = ResetUAction | IgnoreKeyboard | RestoreKeyboard | PopupDungeon | PopupFeature |
+    ChangeInteraction | PlaceTokenPopup | IgnoreAction
+
 
 export type DisplayEvent = {
     type: EventType.DISPLAY
@@ -120,6 +162,7 @@ Reset event
 
 */
 
+// all xy coordinates are MAP coordinators, not canvas coordinatoes 
 export interface InteractionHandler {
     onClick?(xy: [number, number]): void
     onMove?(xy: [number, number]): Array<Event>
@@ -133,13 +176,13 @@ export interface InteractionHandler {
 
 export class ViewHandler implements InteractionHandler {
     camera: Camera;
-    cursor: [number, number]; // where is this coming from! 
+    cursor: [number, number];
     icons: Icons;
 
     constructor(camera: Camera, icons: Icons, cursor: [number, number]) {
-        this.camera = camera
+        this.camera = camera;
         this.icons = icons;
-        this.cursor = cursor
+        this.cursor = cursor;
     }
 
     onClick?(xy: [number, number]): void {
@@ -180,7 +223,8 @@ export class ViewHandler implements InteractionHandler {
         return [];
     }
     render(context: CanvasRenderingContext2D): void {
-        this.icons.renderCursor(context, this.cursor);
+        // need to convert into actual coordinates.
+        this.icons.renderCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
         // can render cursor and popups in this thing 
     }
 
@@ -194,11 +238,17 @@ export class DrawHandler implements InteractionHandler {
     mouseMode: MouseMode;
     clickBounds: SquareCounter;
     selectedTile: SelectedTile;
+    camera: Camera;
+    cursor: [number, number];
+    icons: Icons;
 
 
-    constructor(selectedTile: SelectedTile) {
+    constructor(selectedTile: SelectedTile, camera: Camera, icons: Icons, cursor: [number, number]) {
         this.mouseMode = new MouseMode();
         this.selectedTile = selectedTile;
+        this.camera = camera;
+        this.icons = icons;
+        this.cursor = cursor;
     }
 
     onClick?(xy: [number, number]): void {
@@ -210,38 +260,97 @@ export class DrawHandler implements InteractionHandler {
         }
     }
     onMove?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+        // should cover popup/tooltip type things when you hover over things 
+        // otherwise just the cursor
+        this.cursor = xy;
+        if (this.mouseMode.get().major === "RANGE") {
+            this.clickBounds.lim(xy);
+        }
+        return [];
     }
     onEnd?(xy: [number, number]): Event[] {
         let mode = this.mouseMode.get();
         if (mode.major === "RANGE") {
             let bounds = this.clickBounds.bounds();
             if (mode.minor === "DRAW") {
-                let action: FillAction = {
-                    kind: ActionType.Fill,
-                    bounds: bounds,
-                    tileset: this.getTileLayer(),
-                    idx: this.selectedTile.idx
-                }
-                return new Array({ type: EventType.GAME, action: action })
+                this.mouseMode.reset();
+                return new Array({
+                    type: EventType.GAME, action: {
+                        kind: ActionType.Fill,
+                        bounds: bounds,
+                        tileset: this.getTileLayer(),
+                        idx: this.selectedTile.idx
+                    }
+                })
                 // return a bunch of create tiles events 
             } else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
+                this.mouseMode.reset();
+                return new Array({
+                    type: EventType.GAME, action: {
+                        kind: ActionType.Clear,
+                        bounds: bounds,
+                        layer: 2
+                    }
+                })
                 // return a bunch of clear tile events 
-                return [];
             }
         }
+        return [];
     }
 
     onKeyDown(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        switch (e.code) {
+            case "Digit1":
+                this.mouseMode.reset();
+                return new Array({ type: EventType.DISPLAY, action: { kind: UActionType.PopupDungeon } })
+            case "Digit2":
+                this.mouseMode.reset();
+                return new Array({ type: EventType.DISPLAY, action: { kind: UActionType.PopupFeature } })
+            case "ArrowDown": // down arrow
+                this.camera.down();
+                this.mouseMode.reset();
+                break;
+            case "ArrowUp": // up arrow
+                this.camera.up();
+                this.mouseMode.reset();
+                break;
+            case "ArrowLeft": // left arrow
+                this.camera.left();
+                this.mouseMode.reset();
+                break;
+            case "ArrowRight": // right arrow
+                this.camera.right();
+                this.mouseMode.reset();
+                break;
+        }
+        return [];
     }
     onKeyPressed(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        if (e.code === "KeyD" && e.shiftKey) {
+            this.mouseMode.setMinorClearAll() // need a way to flip back to whatever it was before.
+        }
+        return [];
     }
-    render(context: CanvasRenderingContext2D): void { }
+    render(context: CanvasRenderingContext2D): void {
+        this.icons.renderCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
+        if (this.mouseMode.get().major === "RANGE") {
+            let pattern = context.fillStyle
+            context.fillStyle = "blue";
+            let bounds = this.clickBounds.bounds();
+            context.globalAlpha = 0.25;
+            context.fillRect(
+                (bounds.x[0] - this.camera.leftX) * 24,
+                (bounds.y[0] - this.camera.topY) * 24,
+                (bounds.x[1] - this.camera.leftX) * 24 + 24 - (bounds.x[0] - this.camera.leftX) * 24,
+                (bounds.y[1] - this.camera.topY) * 24 + 24 - (bounds.y[0] - this.camera.topY) * 24
+            );
+            context.fillStyle = pattern;
+            context.globalAlpha = 1;
+        }
+    }
 
     getTileLayer(): number {
         if (this.selectedTile.sheet === "dungeon") {
@@ -257,23 +366,44 @@ export class DrawHandler implements InteractionHandler {
 }
 
 export class MoveHandler implements InteractionHandler {
+
+    camera: Camera;
+    cursor: [number, number];
+    icons: Icons;
+    mode: MouseMode;
+
+    constructor(camera: Camera, icons: Icons, cursor: [number, number]) {
+        this.camera = camera;
+        this.icons = icons;
+        this.cursor = cursor;
+        this.mode = new MouseMode();
+    }
+
     onClick?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+        if (this.mode.get().major !== "MOVING") {
+            return new Array({ type: EventType.DISPLAY, action: { kind: UActionType.PlaceToken, xy: xy }, })
+        }
+        return [];
     }
     onMove?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+        if (this.mode.get().major !== "MOVING") {
+            // draw yellow cursor 
+        } else {
+            // draw red cursor 
+        }
+        return [];
     }
     onEnd?(xy: [number, number]): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
     onKeyDown(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
     onKeyPressed(e: KeyboardEvent): Event[] {
-        throw new Error("Method not implemented.")
+        return [];
     }
 
     render(context: CanvasRenderingContext2D): void { }

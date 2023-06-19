@@ -44,8 +44,9 @@ export class MouseMode {
         this.mode.major = "RANGE"
     }
 
-    setMoving(): void {
+    setMovingStart(): void {
         this.mode.major = "MOVING"
+        this.mode.minor = "SELECT"
     }
 
     setSelection() {

@@ -11,4 +11,7 @@ export const selectedTileStore: Writable<SelectedTile> = writable({
     idx: 0
 });
 
+
+export const entityEventStore: Writable<Array<Event>> = writable([]);
+
 export const modal = writable(null);

@@ -8,19 +8,22 @@
 	import EntityPicker from "../popups/EntityPicker.svelte";
 	import { modal } from "../stores/UI";
 	import EntityForm from "../popups/EntityForm.svelte";
+	import Palette from "../popups/Palette.svelte";
 	import { bind } from "../Modal.svelte";
 
 	import Modal from "../Modal.svelte";
 	import { selectedTileStore } from "../stores/UI";
+	import { entityEventStore } from "../stores/UI";
 	import { MouseMode } from "./MouseMode";
 	import { EntityState, EntityType } from "../domain/EntityRenderer";
-	import { ViewHandler } from "./Interaction";
+	import {
+		DrawHandler,
+		EventType,
+		UActionType,
+		ViewHandler,
+	} from "./Interaction";
 	import { Camera } from "./Camera";
-
-	// https://svelte.dev/repl/434e0b14546747688401e8808c060a23?version=3.47.0
-
-	let tIdx = 97;
-	$: tileIndex = tIdx;
+	import { LocalEventSystem } from "../domain/EventSystem";
 
 	const tileSize = 24;
 	const mapSize = [200, 200];
@@ -37,24 +40,19 @@
 	let paletteSelected;
 	let interfaceHandler;
 
-	const mouseMode = new MouseMode();
-	let clickBounds; // when someone clicks, decide if you should try a single or multiple tile
+	// const mouseMode = new MouseMode();
+	// let clickBounds; // when someone clicks, decide if you should try a single or multiple tile
 
-	const stores = {
-		selected: selectedTileStore.subscribe((value) => {
-			paletteSelected = value;
-			if (interfaceHandler !== undefined) {
-				interfaceHandler.update(value);
-			}
-		}),
-	};
+	let stores;
 
 	let camera;
 	let canvas;
 	let context;
 	let selectedMapTile;
-	let map;
+	let mode;
+	// let map;
 	let entities;
+	let es;
 	let t, l;
 	let mapFocus = true;
 
@@ -92,10 +90,12 @@
 			mapSize[0],
 			mapSize[1]
 		);
-		interfaceHandler = new ViewHandler(camera, tileSheet.icons);
+		viewHandlerFactory("RESET");
 
-		map = new MapState(mapSize[0], mapSize[1], tileSheet, camera);
-		entities = new EntityState();
+		let map = new MapState(mapSize[0], mapSize[1], tileSheet, camera);
+		entities = new EntityState(camera);
+		es = new LocalEventSystem(map, entities, camera);
+		// TODO: this default canvas stuff should move somewhere else.
 		let defaultTile = tileSheet.dungeon.tiles[101];
 		context = canvas.getContext("2d");
 		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
@@ -103,6 +103,19 @@
 		context.font = "18pt Monospace";
 		handleSize();
 		draw();
+		stores = {
+			selected: selectedTileStore.subscribe((value) => {
+				paletteSelected = value;
+				console.log(value);
+				if (interfaceHandler !== undefined) {
+					interfaceHandler.update(value);
+				}
+			}),
+			entityEvents: entityEventStore.subscribe((events) => {
+				console.log(events);
+				handleEvent(events);
+			}),
+		};
 	});
 
 	const teardown = () => {
@@ -112,46 +125,33 @@
 	onDestroy(teardown);
 
 	function onKeyDown(e) {
-		if (mapFocus) {
-			console.log(e.key);
-			switch (e.keyCode) {
-				case 27: // esc
-					modeReset();
-					draw();
-					break;
-			}
-		}
+		interfaceHandler.onKeyDown(e);
+		// if (mapFocus) {
+		// 	console.log(e.key);
+		// 	switch (e.keyCode) {
+		// 		case 27: // esc
+		// 			modeReset();
+		// 			draw();
+		// 			break;
+		// 	}
+		// }
 	}
 
 	function onKeyUp(e) {
-		interfaceHandler.onKeyUp(e);
-		if (mapFocus) {
+		if (!e.shiftKey) {
 			switch (e.keyCode) {
-				case 8: // delete
-					// when minor mode has a selected entity, delete it?
-					// you have the entity id to delete we could probably implement this
+				case 68: // d == draw mode
+					viewHandlerFactory("DRAW");
 					break;
-				case 49: // 1
-					// todo launch the floor/wall picker
+				case 86: // v == view mode
+					viewHandlerFactory("RESET");
 					break;
-				case 50: // 2
-					// todo launch the feature pickler
-					break;
-				case 88: // esc
-					mouseMode.reset();
-					mapFocus = true;
-					break;
-				case 83: // s
-					mouseMode.setSelection();
-					draw();
-					break;
-				case 65: // a
+				case 65: // TEMPORARY => move to MoveHandler // a key
 					mapFocus = false;
 					modal.set(
 						bind(EntityForm, {
 							entities: entities,
 							xy: selectedMapTile,
-							entityType: EntityType.PLAYER,
 							callback: () => {
 								mapFocus = true;
 								draw();
@@ -159,144 +159,146 @@
 						})
 					);
 					break;
-				case 69: // e
-					mapFocus = false;
-					modal.set(
-						bind(EntityForm, {
-							entities: entities,
-							xy: selectedMapTile,
-							entityType: EntityType.NPC,
-							callback: () => {
-								mapFocus = true;
-								draw();
-							},
-						})
-					);
-					break;
-				case 40: // down arrow
-					console.log(selectedMapTile);
-					camera.down();
-					draw();
-					break;
-				case 38: // up arrow
-					camera.up();
-					draw();
-					break;
-				case 37: // left arrow
-					camera.left();
-					draw();
-					break;
-				case 39: // right arrow
-					camera.right();
+				default:
+					handleEvent(interfaceHandler.onKeyUp(e));
 					draw();
 					break;
 			}
 		}
+		// if (mapFocus) {
+		// 	switch (e.keyCode) {
+		// 		case 8: // delete
+		// 			// when minor mode has a selected entity, delete it?
+		// 			// you have the entity id to delete we could probably implement this
+		// 			break;
+		// 		case 49: // 1
+		// 			// todo launch the floor/wall picker
+		// 			break;
+		// 		case 50: // 2
+		// 			// todo launch the feature pickler
+		// 			break;
+		// 		case 88: // esc
+		// 			mouseMode.reset();
+		// 			mapFocus = true;
+		// 			break;
+		// 		case 83: // s
+		// 			mouseMode.setSelection();
+		// 			draw();
+		// 			break;
+
+		// 		case 69: // e
+		// 			mapFocus = false;
+		// 			modal.set(
+		// 				bind(EntityForm, {
+		// 					entities: entities,
+		// 					xy: selectedMapTile,
+		// 					entityType: EntityType.NPC,
+		// 					callback: () => {
+		// 						mapFocus = true;
+		// 						draw();
+		// 					},
+		// 				})
+		// 			);
+		// 			break;
+		// 		case 40: // down arrow
+		// 			console.log(selectedMapTile);
+		// 			camera.down();
+		// 			draw();
+		// 			break;
+		// 		case 38: // up arrow
+		// 			camera.up();
+		// 			draw();
+		// 			break;
+		// 		case 37: // left arrow
+		// 			camera.left();
+		// 			draw();
+		// 			break;
+		// 		case 39: // right arrow
+		// 			camera.right();
+		// 			draw();
+		// 			break;
+		// 	}
+		// }
 	}
 
 	function onKeyHeld(e) {
-		if (mapFocus) {
-			switch (e.keyCode) {
-				case 88: // x
-					if (e.shiftKey) {
-						mouseMode.setMinorClear();
-					} else {
-						mouseMode.setMinorClearAll();
-					}
-					break;
-			}
-		}
+		interfaceHandler.onKeyPressed(e);
 	}
 
 	const handleStart = () => {
-		if (mouseMode.get().major !== "SELECTION") {
-			clickBounds = new SquareCounter(selectedMapTile);
-			if (mouseMode.get().major === "NONE") {
-				mouseMode.setRange();
-			}
-		} else {
-			// you are in selection mode
-
-			if (mouseMode.get().minor === "TARGET") {
-				// we are placing a tile
-			} else {
-				let stack = entities.list(
-					selectedMapTile[0],
-					selectedMapTile[1]
-				);
-				// we are selecting a tile
-				// if nothing there -> mode reset
-				// if we click on something
-				//   if there is one entity
-				//   if there is more than one entity open up dialog box to select which one
-			}
-		}
+		interfaceHandler.onClick(selectedMapTile);
 	};
 
 	const modeReset = () => {
-		mouseMode.reset();
-		clickBounds = undefined;
+		// mouseMode.reset();
+		// clickBounds = undefined;
 	};
 
-	// refactor these two things, should take the mode + xy and delegate to a class
-	const addTileFromPalette = (xy) => {
-		if (paletteSelected.sheet === "dungeon") {
-			console.log(
-				`dungeon click x: ${selectedMapTile[0]}, y: ${selectedMapTile[1]}, tile: ${paletteSelected.idx}`
-			);
-			map.addDungeon(xy[0], xy[1], paletteSelected.idx);
-		} else if (paletteSelected.sheet === "feature") {
-			console.log(
-				`feature click x: ${selectedMapTile[0]}, y: ${selectedMapTile[1]}, tile: ${paletteSelected.idx}`
-			);
-			map.addFeature(xy[0], xy[1], paletteSelected.idx);
-		} else {
-			console.log("ERROR: CANNOT ADD TILE TO MAP");
+	const handleEvent = (e) => {
+		if (e[0] !== undefined) {
+			let gameEvents = [];
+			e.forEach((ee) => {
+				if (ee.type === EventType.GAME) {
+					gameEvents.push(ee);
+				} else {
+					handleDisplayEvent(ee);
+				}
+			});
+			gameEvents.forEach((e) => es.event(e));
 		}
 	};
 
-	// refactor these two things, should take the mode + xy and delegate to a class
-	const removeTileFromPalette = (xy) => {
-		if (mouseMode.get().minor === "CLEARALL") {
-			map.removeDungeon(xy[0], xy[1]);
-			map.removeFeature(xy[0], xy[1], paletteSelected.idx);
-		} else {
-			if (paletteSelected.sheet === "dungeon") {
-				map.removeDungeon(xy[0], xy[1]);
-			} else if (paletteSelected.sheet === "feature") {
-				map.removeFeature(xy[0], xy[1], paletteSelected.idx);
-			} else {
-				console.log("ERROR: CANNOT ADD TILE TO MAP");
-			}
+	const handleDisplayEvent = (e) => {
+		console.log(e);
+		if (e.action.kind === UActionType.PopupDungeon) {
+			modal.set(
+				bind(Palette, {
+					tilesheet: tileSheet.dungeon,
+					height: 6 * 24,
+					icons: tileSheet.icon,
+					sheetName: "dungeon",
+				})
+			);
+		} else if (e.action.kind === UActionType.PopupFeature) {
+			modal.set(
+				bind(Palette, {
+					tilesheet: tileSheet.feature,
+					height: 2 * 24,
+					icons: tileSheet.icon,
+					sheetName: "feature",
+				})
+			);
 		}
 	};
 
 	const draw = () => {
 		context.fillRect(0, 0, context.canvas.width, context.canvas.height);
-		map.render(context);
-		entities.render(context);
+		es.render(context);
+		// entities.render(context);
+		interfaceHandler.render(context);
 
-		if (mouseMode.get().major !== "SELECTION") {
-			tileSheet.icon.renderCursor(context, selectedMapTile);
-		} else {
-			tileSheet.icon.renderSelectionCursor(context, selectedMapTile);
-		}
+		// if (mouseMode.get().major !== "SELECTION") {
+		// 	tileSheet.icon.renderCursor(context, selectedMapTile);
+		// } else {
+		// 	tileSheet.icon.renderSelectionCursor(context, selectedMapTile);
+		// }
 
-		context.fillStyle = pattern;
+		// context.fillStyle = pattern;
 	};
 
 	const handleEnd = () => {
-		// console.log(tiles);
-		let mode = mouseMode.get();
-		if (mode.major === "RANGE") {
-			let tiles = clickBounds.tilesLim();
-			if (mode.minor === "DRAW") {
-				tiles.forEach((tile) => addTileFromPalette(tile));
-			} else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
-				tiles.forEach((tile) => removeTileFromPalette(tile));
-			}
-		}
-		modeReset();
+		handleEvent(interfaceHandler.onEnd(selectedMapTile));
+		// // console.log(tiles);
+		// let mode = mouseMode.get();
+		// if (mode.major === "RANGE") {
+		// 	let tiles = clickBounds.tilesLim();
+		// 	if (mode.minor === "DRAW") {
+		// 		tiles.forEach((tile) => addTileFromPalette(tile));
+		// 	} else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
+		// 		tiles.forEach((tile) => removeTileFromPalette(tile));
+		// 	}
+		// }
+		// modeReset();
 		draw();
 	};
 
@@ -305,29 +307,55 @@
 		draw();
 	};
 
-	const handleMove = ({ offsetX: x1, offsetY: y1 }) => {
-		selectedMapTile = Grid.getTileCoords(x1, y1);
-		draw();
-		let mode = mouseMode.get();
-		if (mode.major === "RANGE") {
-			clickBounds.lim(selectedMapTile);
-			let bounds = clickBounds.bounds();
-			draw();
-
-			// this doesn't quite work, it flickers a ton.
-			// need to make another class that is handling this OR NOTHING
-			// in the drawTile
-			context.fillStyle = "blue";
-			context.globalAlpha = 0.25;
-			context.fillRect(
-				bounds.x[0] * 24,
-				bounds.y[0] * 24,
-				bounds.x[1] * 24 + 24 - bounds.x[0] * 24,
-				bounds.y[1] * 24 + 24 - bounds.y[0] * 24
+	const viewHandlerFactory = (s) => {
+		if (s === "RESET") {
+			interfaceHandler = new ViewHandler(
+				camera,
+				tileSheet.icon,
+				selectedMapTile
 			);
-			context.fillStyle = pattern;
-			context.globalAlpha = 1;
+			mode = "VIEW";
+		} else if (s === "DRAW") {
+			interfaceHandler = new DrawHandler(
+				paletteSelected,
+				camera,
+				tileSheet.icon,
+				selectedMapTile
+			);
+			mode = "DRAW";
 		}
+	};
+
+	const handleMove = ({ offsetX: x1, offsetY: y1 }) => {
+		let canvasTile = Grid.getTileCoords(x1, y1);
+		selectedMapTile = [
+			canvasTile[0] + camera.leftX,
+			canvasTile[1] + camera.topY,
+		]; //
+		interfaceHandler.onMove(selectedMapTile);
+
+		draw();
+
+		// let mode = mouseMode.get();
+		// if (mode.major === "RANGE") {
+		// 	clickBounds.lim(selectedMapTile);
+		// 	let bounds = clickBounds.bounds();
+		// 	draw();
+
+		// 	// this doesn't quite work, it flickers a ton.
+		// 	// need to make another class that is handling this OR NOTHING
+		// 	// in the drawTile
+		// 	context.fillStyle = "blue";
+		// 	context.globalAlpha = 0.25;
+		// 	context.fillRect(
+		// 		bounds.x[0] * 24,
+		// 		bounds.y[0] * 24,
+		// 		bounds.x[1] * 24 + 24 - bounds.x[0] * 24,
+		// 		bounds.y[1] * 24 + 24 - bounds.y[0] * 24
+		// 	);
+		// 	context.fillStyle = pattern;
+		// 	context.globalAlpha = 1;
+		// }
 	};
 
 	const handleSize = () => {
@@ -368,11 +396,12 @@
 		}}
 	/>
 </div>
-<Toolbar bind:tilePos={selectedMapTile} />
+<Toolbar bind:tilePos={selectedMapTile} bind:modeString={mode} />
 <Modal show={$modal}>
 	<TilePicker {tileSheet} />
 </Modal>
 
+// need to figure out how to share this better.
 <Modal>
 	<EntityPicker {entities} />
 </Modal>

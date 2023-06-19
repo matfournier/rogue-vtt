@@ -1,3 +1,4 @@
+import type { Camera } from "../game/Camera";
 
 export enum EntityType {
     PLAYER,
@@ -101,10 +102,10 @@ export class EntityState {
     labels: Map<string, string>
     colours: Map<string, string>
 
-    constructor() {
+    constructor(camera: Camera) {
         this.labels = new Map()
         this.colours = new Map()
-        this.state = new EntityRenderer(this.colours, this.labels)
+        this.state = new EntityRenderer(this.colours, this.labels, camera)
         this.colours.set("0", "blue") // pc 
         this.colours.set("1", "white") // pcs 
         this.colours.set("2", "yellow") // npc 
@@ -126,6 +127,7 @@ export class EntityState {
 
     removeEntityAt(entity: Entity, x: number, y: number) {
         this.state.remove(entity, x, y)
+        // todo: remove label if it no longer exists 
     }
 
     removeAll(entity: Entity) {
@@ -142,23 +144,26 @@ export class EntityState {
     //         stack.stack.forEach((entity) => )
     //     )
     // }
-    render(context: CanvasRenderingContext2D) {
-        this.state.render(context)
+    render(context: CanvasRenderingContext2D, x: number, y: number) {
+        this.state.render(context, x, y)
     }
 }
 
 export class EntityRenderer {
     map: Map<string, Stack>
-    labels: Map<string, string> // "g" -> "goblin"
+    labels: Map<string, string> // "g" -> "goblin" TODO need a different one for PCs and NPCs
     colours: Map<string, string> // "npc" -> colour 
+    camera: Camera
 
-    constructor(colours: Map<string, string>, labels: Map<string, string>) {
+    constructor(colours: Map<string, string>, labels: Map<string, string>, camera: Camera) {
         this.map = new Map()
         this.labels = labels;
         this.colours = colours;
+        this.camera = camera;
     }
 
     put(e: Entity, x: number, y: number): void {
+        console.log(e)
         let key = this.key(x, y)
         let stack = this.map.get(key)
         if (stack !== undefined) {
@@ -201,28 +206,30 @@ export class EntityRenderer {
         })
     }
 
-    render(context: CanvasRenderingContext2D): void {
-        let palette = context.fillStyle
+    // render(context: CanvasRenderingContext2D): void {
+    //     let palette = context.fillStyle
 
-        this.map.forEach((stack, coords) => {
-            const xy = this.idx(coords)
+    //     this.map.forEach((stack, coords) => {
+    //         const xy = this.idx(coords)
+    //         let colour = this.colours.get(stack.stackType.toString())
+    //         context.fillStyle = colour
+    //         context.fillText(stack.c, (xy[0] * 24) + 4, (xy[1] * 24) + 19)
+    //     })
+
+    //     context.fillStyle = palette
+
+    // }
+
+    render(context: CanvasRenderingContext2D, x: number, y: number): void {
+        // let palette = context.fillStyle
+        let stack = this.map.get(this.key(x, y));
+        if (stack !== undefined) {
             let colour = this.colours.get(stack.stackType.toString())
             context.fillStyle = colour
-            context.fillText(stack.c, (xy[0] * 24) + 4, (xy[1] * 24) + 19)
-        })
+            context.fillText(stack.c, ((x - this.camera.leftX) * 24) + 4, ((y - this.camera.topY) * 24) + 19)
+        }
 
-        context.fillStyle = palette
-
-        // context.fillStyle = "grey";
-        // context.fillText("A", 40 * 24, 18 * 24);
-        // context.fillText("B", 42 * 24, 20 * 24);
-
-        // context.fillStyle = "yellow";
-
-        // context.fillText("g", 44 * 24, 19 * 24);
-        // context.fillText("g", 42 * 24, 21 * 24);
-        // context.fillText("g", 40 * 24, 21 * 24);
-        // context.fillText("g", 42 * 24, 22 * 24);
-
+        // context.fillStyle = palette
     }
+
 }

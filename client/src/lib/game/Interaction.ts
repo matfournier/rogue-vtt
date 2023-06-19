@@ -171,7 +171,7 @@ export interface InteractionHandler {
     onKeyUp(e: KeyboardEvent): Array<Event>
     onKeyPressed(e: KeyboardEvent): Array<Event>
     render(context: CanvasRenderingContext2D): void
-    update(selectedTile: SelectedTile): void
+    update(selectedTile: SelectedTile, entity?: Entity): void
 }
 
 export class ViewHandler implements InteractionHandler {
@@ -228,7 +228,7 @@ export class ViewHandler implements InteractionHandler {
         // can render cursor and popups in this thing 
     }
 
-    update(selectedTile: SelectedTile): void { }
+    update(selectedTile: SelectedTile, entity?: Entity): void { }
 
 
 }
@@ -325,6 +325,9 @@ export class DrawHandler implements InteractionHandler {
                 this.camera.right();
                 this.mouseMode.reset();
                 break;
+            case "Escape":
+                this.mouseMode.reset();
+                break;
         }
         return [];
     }
@@ -359,7 +362,7 @@ export class DrawHandler implements InteractionHandler {
             return 1;
         }
     }
-    update(selectedTile: SelectedTile): void {
+    update(selectedTile: SelectedTile, entity?: Entity): void {
         this.selectedTile = selectedTile;
     }
 
@@ -380,17 +383,22 @@ export class MoveHandler implements InteractionHandler {
     }
 
     onClick?(xy: [number, number]): Event[] {
-        if (this.mode.get().major !== "MOVING") {
-            return new Array({ type: EventType.DISPLAY, action: { kind: UActionType.PlaceToken, xy: xy }, })
+        let mode = this.mode.get();
+        console.log(mode);
+        if (mode.major !== "MOVING") {
+            return new Array({ type: EventType.DISPLAY, action: { kind: UActionType.PlaceToken, xy: xy } })
+        } else if (mode.major === "MOVING") {
+            if (mode.minor === "SELECT") {
+                this.mode.setMovingNext();
+                // deal with whatever component is going to do the selection
+            } else {
+                // target place
+            }
         }
         return [];
     }
     onMove?(xy: [number, number]): Event[] {
-        if (this.mode.get().major !== "MOVING") {
-            // draw yellow cursor 
-        } else {
-            // draw red cursor 
-        }
+        this.cursor = xy;
         return [];
     }
     onEnd?(xy: [number, number]): Event[] {
@@ -400,14 +408,40 @@ export class MoveHandler implements InteractionHandler {
         return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
+        switch (e.code) {
+            case "KeyM":
+                this.mode.setMovingStart
+                break;
+            case "Escape":
+                this.mode.reset();
+                break;
+            case "ArrowDown": // down arrow
+                this.camera.down();
+                break;
+            case "ArrowUp": // up arrow
+                this.camera.up();
+                break;
+            case "ArrowLeft": // left arrow
+                this.camera.left();
+                break;
+            case "ArrowRight": // right arrow
+                this.camera.right();
+                break;
+        }
         return [];
     }
     onKeyPressed(e: KeyboardEvent): Event[] {
         return [];
     }
 
-    render(context: CanvasRenderingContext2D): void { }
+    render(context: CanvasRenderingContext2D): void {
+        if (this.mode.get().minor !== "PLACE") {
+            this.icons.renderCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
+        } else {
+            this.icons.renderSelectionCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
+        }
+    }
 
-    update(selectedTile: SelectedTile): void { }
+    update(selectedTile: SelectedTile, entity?: Entity): void { }
 
 }

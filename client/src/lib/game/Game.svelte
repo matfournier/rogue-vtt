@@ -19,6 +19,7 @@
 	import {
 		DrawHandler,
 		EventType,
+		MoveHandler,
 		UActionType,
 		ViewHandler,
 	} from "./Interaction";
@@ -146,18 +147,8 @@
 				case 86: // v == view mode
 					viewHandlerFactory("RESET");
 					break;
-				case 65: // TEMPORARY => move to MoveHandler // a key
-					mapFocus = false;
-					modal.set(
-						bind(EntityForm, {
-							entities: entities,
-							xy: selectedMapTile,
-							callback: () => {
-								mapFocus = true;
-								draw();
-							},
-						})
-					);
+				case 80: // p == place mode
+					viewHandlerFactory("PLACE");
 					break;
 				default:
 					handleEvent(interfaceHandler.onKeyUp(e));
@@ -226,7 +217,7 @@
 	}
 
 	const handleStart = () => {
-		interfaceHandler.onClick(selectedMapTile);
+		handleEvent(interfaceHandler.onClick(selectedMapTile));
 	};
 
 	const modeReset = () => {
@@ -235,7 +226,7 @@
 	};
 
 	const handleEvent = (e) => {
-		if (e[0] !== undefined) {
+		if (e !== undefined && e[0] !== undefined) {
 			let gameEvents = [];
 			e.forEach((ee) => {
 				if (ee.type === EventType.GAME) {
@@ -266,6 +257,19 @@
 					height: 2 * 24,
 					icons: tileSheet.icon,
 					sheetName: "feature",
+				})
+			);
+		} else if (e.action.kind === UActionType.PlaceToken) {
+			console.log("zzzz");
+			mapFocus = false;
+			modal.set(
+				bind(EntityForm, {
+					entities: entities,
+					xy: e.action.xy,
+					callback: () => {
+						mapFocus = true;
+						draw();
+					},
 				})
 			);
 		}
@@ -303,8 +307,8 @@
 	};
 
 	const handleExit = () => {
-		modeReset();
-		draw();
+		// modeReset();
+		// draw();
 	};
 
 	const viewHandlerFactory = (s) => {
@@ -323,6 +327,13 @@
 				selectedMapTile
 			);
 			mode = "DRAW";
+		} else if (s === "PLACE") {
+			interfaceHandler = new MoveHandler(
+				camera,
+				tileSheet.icon,
+				selectedMapTile
+			);
+			mode = "PLACE";
 		}
 	};
 
@@ -398,10 +409,10 @@
 </div>
 <Toolbar bind:tilePos={selectedMapTile} bind:modeString={mode} />
 <Modal show={$modal}>
-	<TilePicker {tileSheet} />
+	<!-- <TilePicker {tileSheet} /> -->
 </Modal>
 
-// need to figure out how to share this better.
+<!-- // need to figure out how to share this better. -->
 <Modal>
-	<EntityPicker {entities} />
+	<!-- <EntityPicker {entities} /> -->
 </Modal>

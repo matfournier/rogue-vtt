@@ -49,6 +49,11 @@ export class MouseMode {
         this.mode.minor = "SELECT"
     }
 
+    setMovingNext(): void {
+        this.mode.major = "MOVING"
+        this.mode.minor = "PLACE"
+    }
+
     setSelection() {
         this.mode.major = "SELECTION"
         this.mode.minor = "NOTARGET"

@@ -201,6 +201,8 @@ export class ViewHandler implements InteractionHandler {
         return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
+        e.preventDefault();
+
         // todo vim keys for moving around 
         // TODO updating cursor after moving (should emit a CursorUpdate event or something?)
         switch (e.code) {
@@ -302,6 +304,7 @@ export class DrawHandler implements InteractionHandler {
         return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
+        e.preventDefault();
         switch (e.code) {
             case "Digit1":
                 this.mouseMode.reset();
@@ -408,6 +411,7 @@ export class MoveHandler implements InteractionHandler {
         return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
+        e.preventDefault();
         switch (e.code) {
             case "KeyM":
                 this.mode.setMovingStart

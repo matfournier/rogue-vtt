@@ -26,7 +26,7 @@
             let entity = {
                 c: data.character,
                 type: entityType(data.token),
-                id: Math.floor(Date.now() + Math.random() * 2000000).toString, // move serverside
+                id: Math.floor(Date.now() + Math.random() * 2000000).toString(), // move serverside
             };
 
             // todo: differentiate between entities that already exist and those that don't

@@ -58,10 +58,13 @@ export class LocalEventSystem implements EventSystem {
                 }
                 break;
             case ActionType.TokenDescription:
-                this.entities.updateLabel(a.token, a.desc) // todo: doesn't tkae into account side
+                this.entities.updateLabel(a.token, a.desc); // todo: doesn't tkae into account side
                 break;
             case ActionType.AddToken:
-                this.entities.addEntity(a.entity, a.xy[0], a.xy[1])
+                this.entities.addEntity(a.entity, a.xy[0], a.xy[1]);
+                break;
+            case ActionType.RemoveToken:
+                this.entities.removeEntityAt(a.entity, a.xy[0], a.xy[1]);
                 break;
         }
     }

@@ -64,21 +64,21 @@ class Stack {
         return this;
     }
 
-    remove(entity: Entity): Stack {
-        this.stack.filter(e => e !== entity)
-        this.count = this.stack.length
-        if (this.count === 0) {
+    remove?(entity: Entity): Stack {
+        let newStack = this.stack.filter(e => e.id !== entity.id)
+        let count = newStack.length
+        if (count === 0) {
             return undefined;
         }
-        else if (this.count === 1) {
-            let entity = this.stack[0]
-            this.c = entity.c
-            this.stackType = this.stackTypeFromEntityType(entity)
+        else if (count === 1) {
+            return new Stack(newStack[0]);
         } else {
-            this.c = this.count.toString();
-            this.stackType = this.getStackType(this.stack)
+            this.c = count.toString();
+            this.count = count;
+            this.stackType = this.getStackType(newStack)
+            this.stack = newStack;
+            return this;
         }
-        return this;
     }
 
     private stackTypeFromEntityType(entity: Entity): StackType {
@@ -117,7 +117,7 @@ export class EntityState {
         this.labels = new Map()
         this.colours = new Map()
         this.state = new EntityRenderer(this.colours, this.labels, camera)
-        this.colours.set("0", "blue") // pc 
+        this.colours.set("0", "#348feb") // pc 
         this.colours.set("1", "white") // pcs 
         this.colours.set("2", "yellow") // npc 
         this.colours.set("3", "orange") // npcs
@@ -245,7 +245,7 @@ export class EntityRenderer {
         if (stack !== undefined) {
             let removed = stack.remove(e)
             if (removed !== undefined) {
-                this.map.set(key, stack.remove(e)) // check if I can just mutate this in place.
+                this.map.set(key, removed)
             } else {
                 this.map.delete(key)
             }

@@ -19,18 +19,14 @@ export class Camera {
         this.hexHeight = hexHeight;
         this.maxWidth = maxWidth;
         this.maxHeight = maxHeight;
-        console.log(`ll: ${this.leftX}, r: ${this.rightX}, t: ${this.topY}, b: ${this.bottomY}`)
     }
 
     onMove(position: [number, number]): void {
-        console.log(` pre top: ${this.topY} bottom: ${this.bottomY} pos: ${position[0]} ${position}`)
         this.leftX = position[0] - this.hexWidth / 2
         this.rightX = position[0] + this.hexWidth / 2;
         this.topY = position[1] - this.hexHeight / 2;
         this.bottomY = position[1] + this.hexHeight / 2;
         this.snap();
-        console.log(` post top: ${this.topY} bottom: ${this.bottomY}`)
-
     }
 
     private snap(): void {

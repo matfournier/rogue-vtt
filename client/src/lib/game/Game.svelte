@@ -108,13 +108,11 @@
 		stores = {
 			selected: selectedTileStore.subscribe((value) => {
 				paletteSelected = value;
-				console.log(value);
 				if (interfaceHandler !== undefined) {
 					interfaceHandler.update(value);
 				}
 			}),
 			entityEvents: entityEventStore.subscribe((events) => {
-				console.log(events);
 				handleEvent(events);
 			}),
 		};
@@ -186,11 +184,11 @@
 				}
 			});
 			gameEvents.forEach((e) => es.event(e));
+			draw();
 		}
 	};
 
 	const handleDisplayEvent = (e) => {
-		console.log(e);
 		if (e.action.kind === UActionType.PopupDungeon) {
 			modal.set(
 				bind(Palette, {
@@ -210,7 +208,6 @@
 				})
 			);
 		} else if (e.action.kind === UActionType.PlaceToken) {
-			console.log("zzzz");
 			mapFocus = false;
 			modal.set(
 				bind(EntityForm, {
@@ -337,7 +334,7 @@
 />
 
 <div class="main">
-	<div on:keydown={onKeyDown}>
+	<div>
 		<canvas
 			class="game"
 			{width}

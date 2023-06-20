@@ -25,10 +25,11 @@
 	} from "./Interaction";
 	import { Camera } from "./Camera";
 	import { LocalEventSystem } from "../domain/EventSystem";
+	import Sidebar from "../Sidebar.svelte";
 
 	const tileSize = 24;
 	const mapSize = [200, 200];
-	const cameraDimensions = [50, 26];
+	const cameraDimensions = [56, 32];
 
 	export let width = cameraDimensions[0] * tileSize;
 	export let height = cameraDimensions[1] * tileSize;
@@ -139,6 +140,9 @@
 	}
 
 	function onKeyUp(e) {
+		// if (mapfocus) // need to bring this back when dealing with PLACE
+		// possible w/ some other events?
+		// can you do ignore keyboard event -> popup -> resume keyboard event as a sequence of three events?
 		if (!e.shiftKey) {
 			switch (e.keyCode) {
 				case 68: // d == draw mode
@@ -156,60 +160,6 @@
 					break;
 			}
 		}
-		// if (mapFocus) {
-		// 	switch (e.keyCode) {
-		// 		case 8: // delete
-		// 			// when minor mode has a selected entity, delete it?
-		// 			// you have the entity id to delete we could probably implement this
-		// 			break;
-		// 		case 49: // 1
-		// 			// todo launch the floor/wall picker
-		// 			break;
-		// 		case 50: // 2
-		// 			// todo launch the feature pickler
-		// 			break;
-		// 		case 88: // esc
-		// 			mouseMode.reset();
-		// 			mapFocus = true;
-		// 			break;
-		// 		case 83: // s
-		// 			mouseMode.setSelection();
-		// 			draw();
-		// 			break;
-
-		// 		case 69: // e
-		// 			mapFocus = false;
-		// 			modal.set(
-		// 				bind(EntityForm, {
-		// 					entities: entities,
-		// 					xy: selectedMapTile,
-		// 					entityType: EntityType.NPC,
-		// 					callback: () => {
-		// 						mapFocus = true;
-		// 						draw();
-		// 					},
-		// 				})
-		// 			);
-		// 			break;
-		// 		case 40: // down arrow
-		// 			console.log(selectedMapTile);
-		// 			camera.down();
-		// 			draw();
-		// 			break;
-		// 		case 38: // up arrow
-		// 			camera.up();
-		// 			draw();
-		// 			break;
-		// 		case 37: // left arrow
-		// 			camera.left();
-		// 			draw();
-		// 			break;
-		// 		case 39: // right arrow
-		// 			camera.right();
-		// 			draw();
-		// 			break;
-		// 	}
-		// }
 	}
 
 	function onKeyHeld(e) {
@@ -386,26 +336,33 @@
 	on:keyup={onKeyUp}
 />
 
-<div on:keydown={onKeyDown}>
-	<canvas
-		{width}
-		{height}
-		style:background
-		bind:this={canvas}
-		on:mousedown={handleStart}
-		on:touchstart={handleStart}
-		on:mouseup={handleEnd}
-		on:touchend={handleEnd}
-		on:mouseleave={handleExit}
-		on:mousemove={handleMove}
-		on:touchmove={(e) => {
-			const { clientX, clientY } = e.touches[0];
-			handleMove({
-				offsetX: clientX - l,
-				offsetY: clientY - t,
-			});
-		}}
-	/>
+<div class="main">
+	<div on:keydown={onKeyDown}>
+		<canvas
+			class="game"
+			{width}
+			{height}
+			style:background
+			bind:this={canvas}
+			on:mousedown={handleStart}
+			on:touchstart={handleStart}
+			on:mouseup={handleEnd}
+			on:touchend={handleEnd}
+			on:mouseleave={handleExit}
+			on:mousemove={handleMove}
+			on:touchmove={(e) => {
+				const { clientX, clientY } = e.touches[0];
+				handleMove({
+					offsetX: clientX - l,
+					offsetY: clientY - t,
+				});
+			}}
+		/>
+	</div>
+	<div class="sidebar">
+		<Sidebar />
+		<!-- <p>some content</p> -->
+	</div>
 </div>
 <Toolbar bind:tilePos={selectedMapTile} bind:modeString={mode} />
 <Modal show={$modal}>
@@ -416,3 +373,16 @@
 <Modal>
 	<!-- <EntityPicker {entities} /> -->
 </Modal>
+
+<style>
+	div.main {
+		display: flex;
+		width: 100;
+	}
+	div.sidebar {
+		background-color: black;
+		flex-grow: 1;
+		padding-left: 0.75 rem;
+		padding-right: 0.75 rem;
+	}
+</style>

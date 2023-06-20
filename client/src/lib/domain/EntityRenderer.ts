@@ -1,4 +1,5 @@
 import type { Camera } from "../game/Camera";
+import { entityStore } from "../stores/UI";
 
 export enum EntityType {
     PLAYER,
@@ -11,13 +12,23 @@ export type Entity = {
     id: string // TODO this should come from the server/.
 }
 
+export type RichEntity = {
+    entity: Entity
+    xy: [number, number]
+    description: string
+    colour: string
+}
+
+export type Sidebar = {
+    players: Array<RichEntity>
+    npcs: Array<RichEntity>
+}
 
 export function alphabet(): Array<string> {
     const alphabet = [...'abcdefghijklmnopqrstuvwxyz'];
     const upper = alphabet.map(s => s.toUpperCase())
     return upper.concat(alphabet)
 }
-
 
 enum StackType {
     PLAYER,
@@ -114,38 +125,84 @@ export class EntityState {
     }
 
     list(x: number, y: number): Stack | undefined {
-        return this.state.map.get(this.state.key(x, y))
+        return this.state.map.get(this.state.key(x, y));
     }
 
     updateLabel(c: string, description: string) {
-        this.labels.set(c, description)
+        this.labels.set(c, description);
+        this.updateEntityStore();
+
     }
 
     addEntity(entity: Entity, x: number, y: number) {
         this.state.put(entity, x, y)
+        this.updateEntityStore();
     }
 
     removeEntityAt(entity: Entity, x: number, y: number) {
-        this.state.remove(entity, x, y)
+        this.state.remove(entity, x, y);
+        this.updateEntityStore();
         // todo: remove label if it no longer exists 
     }
 
     removeAll(entity: Entity) {
         this.state.removeAll(entity)
         this.labels.delete(entity.c)
+        this.updateEntityStore();
     }
 
     updateColours(type: string, colour: string) {
-        this.colours.set(type, colour)
+        this.colours.set(type, colour);
+        this.updateEntityStore();
     }
-    // entityDetails(): Array<FullySpecifiedEntitiy> {
-    //     let res: Array<FullySpecifiedEntitiy> = new Array()
-    //     this.state.map.forEach((stack, coord) =>
-    //         stack.stack.forEach((entity) => )
-    //     )
-    // }
+
     render(context: CanvasRenderingContext2D, x: number, y: number) {
         this.state.render(context, x, y)
+    }
+
+    updateEntityStore(): void {
+        let players: Array<RichEntity> = new Array();
+        let npcs: Array<RichEntity> = new Array();
+        this.state.map.forEach((stack, coord) => {
+            let xy = this.idx(coord);
+            stack.stack.forEach(entity => {
+                let description = this.labels.get(entity.c)
+                if (entity.type === EntityType.PLAYER) {
+                    let colour = this.colours.get("0");
+                    players.push({ entity: entity, xy: xy, description: description, colour: colour });
+                } else {
+                    let colour = this.colours.get("2");
+                    npcs.push({ entity: entity, xy: xy, description: description, colour: colour });
+                }
+            })
+        }
+        )
+        players.sort((a, b) => {
+            if (a.xy == b.xy) {
+                return 0
+            } else if (a.xy[0] < b.xy[0]) {
+                return -1;
+            } else {
+                return 1;
+            }
+        })
+
+        npcs.sort((a, b) => {
+            if (a.xy == b.xy) {
+                return 0
+            } else if (a.xy[0] < b.xy[0]) {
+                return -1;
+            } else {
+                return 1;
+            }
+        })
+
+        entityStore.set({ players: players, npcs: npcs });
+    }
+
+    private idx(s: string): [number, number] {
+        const split = s.split("-")
+        return [parseInt(split[0]), parseInt(split[1])]
     }
 }
 
@@ -163,7 +220,6 @@ export class EntityRenderer {
     }
 
     put(e: Entity, x: number, y: number): void {
-        console.log(e)
         let key = this.key(x, y)
         let stack = this.map.get(key)
         if (stack !== undefined) {
@@ -172,15 +228,15 @@ export class EntityRenderer {
             let stack = new Stack(e)
             this.map.set(key, stack)
         }
+
+    }
+
+    updateEntityStore(): void {
+        let entities = this.map
     }
 
     key(x: number, y: number): string {
         return `${x}-${y}`
-    }
-
-    private idx(s: string): [number, number] {
-        const split = s.split("-")
-        return [parseInt(split[0]), parseInt(split[1])]
     }
 
     remove(e: Entity, x: number, y: number): void {

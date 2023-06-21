@@ -66,6 +66,10 @@ export class LocalEventSystem implements EventSystem {
             case ActionType.RemoveToken:
                 this.entities.removeEntityAt(a.entity, a.xy[0], a.xy[1]);
                 break;
+            case ActionType.MoveToken:
+                console.log(a)
+                this.entities.move(a.entity, a.from[0], a.from[1], a.to[0], a.to[1]);
+                break;
         }
     }
 

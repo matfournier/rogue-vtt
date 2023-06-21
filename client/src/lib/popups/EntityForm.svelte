@@ -85,7 +85,7 @@
         </label>
     </div>
     <div>
-        <label for="name">Character</label>
+        <label for="name">Glpyh/Token</label>
         <input
             type="text"
             id="character"

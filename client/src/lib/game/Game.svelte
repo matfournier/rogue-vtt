@@ -20,6 +20,7 @@
 		DrawHandler,
 		EventType,
 		MoveHandler,
+		PlaceHandler,
 		UActionType,
 		ViewHandler,
 	} from "./Interaction";
@@ -141,6 +142,7 @@
 		// if (mapfocus) // need to bring this back when dealing with PLACE
 		// possible w/ some other events?
 		// can you do ignore keyboard event -> popup -> resume keyboard event as a sequence of three events?
+		// you notice this when placing glyphs and then accidentally triggering some other mode.
 		if (!e.shiftKey) {
 			switch (e.keyCode) {
 				case 68: // d == draw mode
@@ -219,6 +221,15 @@
 					},
 				})
 			);
+		} else if (e.action.kind === UActionType.MoveEntityStart) {
+			interfaceHandler = new MoveHandler(
+				camera,
+				tileSheet.icon,
+				selectedMapTile,
+				e.action
+			);
+		} else if (e.action.kind === UActionType.Reset) {
+			viewHandlerFactory("RESET");
 		}
 	};
 
@@ -239,17 +250,6 @@
 
 	const handleEnd = () => {
 		handleEvent(interfaceHandler.onEnd(selectedMapTile));
-		// // console.log(tiles);
-		// let mode = mouseMode.get();
-		// if (mode.major === "RANGE") {
-		// 	let tiles = clickBounds.tilesLim();
-		// 	if (mode.minor === "DRAW") {
-		// 		tiles.forEach((tile) => addTileFromPalette(tile));
-		// 	} else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
-		// 		tiles.forEach((tile) => removeTileFromPalette(tile));
-		// 	}
-		// }
-		// modeReset();
 		draw();
 	};
 
@@ -275,12 +275,12 @@
 			);
 			mode = "DRAW";
 		} else if (s === "PLACE") {
-			interfaceHandler = new MoveHandler(
+			interfaceHandler = new PlaceHandler(
 				camera,
 				tileSheet.icon,
 				selectedMapTile
 			);
-			mode = "PLACE";
+			mode = "PLACE TOKEN";
 		}
 	};
 
@@ -379,7 +379,6 @@
 	div.sidebar {
 		background-color: black;
 		flex-grow: 1;
-		padding-left: 0.75 rem;
-		padding-right: 0.75 rem;
+		padding: 0.5rem;
 	}
 </style>

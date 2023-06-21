@@ -2,7 +2,7 @@
     import { onDestroy } from "svelte";
     import { onMount } from "svelte";
     import { entityEventStore } from "./stores/UI";
-    import { ActionType, EventType } from "./game/Interaction";
+    import { ActionType, EventType, UActionType } from "./game/Interaction";
 
     // the name is updated whenever the prop value changes...
     export let entity;
@@ -33,6 +33,16 @@
 
     const move = () => {
         console.log("moving");
+        entityEventStore.set([
+            {
+                type: EventType.DISPLAY,
+                action: {
+                    kind: UActionType.MoveEntityStart,
+                    entity: entity,
+                    xy: xy,
+                },
+            },
+        ]);
     };
 </script>
 
@@ -44,12 +54,5 @@
 <style>
     p {
         margin: 0.8em 0;
-    }
-    span {
-        display: inline-block;
-        padding: 0.2em 1em 0.3em;
-        text-align: center;
-        border-radius: 0.2em;
-        background-color: #ffdfd3;
     }
 </style>

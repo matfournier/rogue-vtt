@@ -31,7 +31,8 @@ export enum UActionType {
     PopupFeature,
     ChangeInteraction,
     PlaceToken,
-    Ignore
+    Ignore,
+    MoveEntityStart
 }
 
 export enum InteractionType {
@@ -121,6 +122,12 @@ export type ChangeInteraction = {
     value: InteractionType
 }
 
+export type MoveEntityStart = {
+    kind: UActionType.MoveEntityStart
+    entity: Entity
+    xy: [number, number]
+}
+
 export type PlaceTokenPopup = {
     kind: UActionType.PlaceToken
     xy: [number, number]
@@ -131,7 +138,7 @@ export type IgnoreAction = {
 }
 
 export type UAction = ResetUAction | IgnoreKeyboard | RestoreKeyboard | PopupDungeon | PopupFeature |
-    ChangeInteraction | PlaceTokenPopup | IgnoreAction
+    ChangeInteraction | PlaceTokenPopup | IgnoreAction | MoveEntityStart
 
 
 export type DisplayEvent = {
@@ -167,6 +174,7 @@ export interface InteractionHandler {
     onClick?(xy: [number, number]): void
     onMove?(xy: [number, number]): Array<Event>
     onEnd?(xy: [number, number]): Array<Event>
+    onLeave?(xy: [number, number]): Array<Event>
     onKeyDown(e: KeyboardEvent): Array<Event>
     onKeyUp(e: KeyboardEvent): Array<Event>
     onKeyPressed(e: KeyboardEvent): Array<Event>
@@ -197,6 +205,10 @@ export class ViewHandler implements InteractionHandler {
     onEnd?(xy: [number, number]): Event[] {
         return [];
     }
+    onLeave?(xy: [number, number]): Array<Event> {
+        return [];
+    }
+
     onKeyDown(e: KeyboardEvent): Event[] {
         return [];
     }
@@ -300,6 +312,11 @@ export class DrawHandler implements InteractionHandler {
         return [];
     }
 
+    onLeave?(xy: [number, number]): Array<Event> {
+        this.mouseMode.reset();
+        return [];
+    }
+
     onKeyDown(e: KeyboardEvent): Event[] {
         return [];
     }
@@ -376,49 +393,65 @@ export class MoveHandler implements InteractionHandler {
     camera: Camera;
     cursor: [number, number];
     icons: Icons;
-    mode: MouseMode;
+    state: MoveEntityStart
 
-    constructor(camera: Camera, icons: Icons, cursor: [number, number]) {
+    constructor(camera: Camera, icons: Icons, cursor: [number, number], state: MoveEntityStart) {
         this.camera = camera;
         this.icons = icons;
         this.cursor = cursor;
-        this.mode = new MouseMode();
+        this.state = state;
     }
 
     onClick?(xy: [number, number]): Event[] {
-        let mode = this.mode.get();
-        console.log(mode);
-        if (mode.major !== "MOVING") {
-            return new Array({ type: EventType.DISPLAY, action: { kind: UActionType.PlaceToken, xy: xy } })
-        } else if (mode.major === "MOVING") {
-            if (mode.minor === "SELECT") {
-                this.mode.setMovingNext();
-                // deal with whatever component is going to do the selection
-            } else {
-                // target place
+        console.log(`click: ${xy[0]} ${xy[1]}`)
+        return new Array({
+            type: EventType.GAME,
+            action: {
+                kind: ActionType.MoveToken,
+                entity: this.state.entity,
+                from: this.state.xy,
+                to: xy
             }
-        }
-        return [];
+        },
+            {
+                type: EventType.DISPLAY,
+                action: {
+                    kind: UActionType.Reset
+                }
+            }
+        );
     }
+
     onMove?(xy: [number, number]): Event[] {
         this.cursor = xy;
         return [];
     }
+
     onEnd?(xy: [number, number]): Event[] {
         return [];
     }
+    onLeave?(xy: [number, number]): Array<Event> {
+        return (new Array({
+            type: EventType.DISPLAY,
+            action: {
+                kind: UActionType.Reset
+            }
+        }));
+    }
+
     onKeyDown(e: KeyboardEvent): Event[] {
         return [];
     }
     onKeyUp(e: KeyboardEvent): Event[] {
         e.preventDefault();
         switch (e.code) {
-            case "KeyM":
-                this.mode.setMovingStart
-                break;
             case "Escape":
-                this.mode.reset();
-                break;
+                return (new Array({
+                    type: EventType.DISPLAY,
+                    action: {
+                        kind: UActionType.Reset
+                    }
+                }))
             case "ArrowDown": // down arrow
                 this.camera.down();
                 break;
@@ -439,11 +472,63 @@ export class MoveHandler implements InteractionHandler {
     }
 
     render(context: CanvasRenderingContext2D): void {
-        if (this.mode.get().minor !== "PLACE") {
-            this.icons.renderCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
-        } else {
-            this.icons.renderSelectionCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
+        this.icons.renderCursor(context, [this.state.xy[0] - this.camera.leftX, this.state.xy[1] - this.camera.topY]);
+        this.icons.renderSelectionCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
+    }
+
+    update(selectedTile: SelectedTile, entity?: Entity): void { }
+
+}
+
+export class PlaceHandler implements InteractionHandler {
+
+    camera: Camera;
+    cursor: [number, number];
+    icons: Icons;
+
+    constructor(camera: Camera, icons: Icons, cursor: [number, number]) {
+        this.camera = camera;
+        this.icons = icons;
+        this.cursor = cursor;
+    }
+
+    onClick?(xy: [number, number]): Event[] {
+        return new Array({ type: EventType.DISPLAY, action: { kind: UActionType.PlaceToken, xy: xy } })
+    }
+    onMove?(xy: [number, number]): Event[] {
+        this.cursor = xy;
+        return [];
+    }
+    onEnd?(xy: [number, number]): Event[] {
+        return [];
+    }
+    onKeyDown(e: KeyboardEvent): Event[] {
+        return [];
+    }
+    onKeyUp(e: KeyboardEvent): Event[] {
+        e.preventDefault();
+        switch (e.code) {
+            case "ArrowDown": // down arrow
+                this.camera.down();
+                break;
+            case "ArrowUp": // up arrow
+                this.camera.up();
+                break;
+            case "ArrowLeft": // left arrow
+                this.camera.left();
+                break;
+            case "ArrowRight": // right arrow
+                this.camera.right();
+                break;
         }
+        return [];
+    }
+    onKeyPressed(e: KeyboardEvent): Event[] {
+        return [];
+    }
+
+    render(context: CanvasRenderingContext2D): void {
+        this.icons.renderCursor(context, [this.cursor[0] - this.camera.leftX, this.cursor[1] - this.camera.topY]);
     }
 
     update(selectedTile: SelectedTile, entity?: Entity): void { }

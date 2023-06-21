@@ -159,6 +159,10 @@ export class EntityState {
     render(context: CanvasRenderingContext2D, x: number, y: number) {
         this.state.render(context, x, y)
     }
+    move(entity: Entity, x: number, y: number, xx: number, yy: number) {
+        this.state.move(entity, x, y, xx, yy);
+        this.updateEntityStore();
+    }
 
     updateEntityStore(): void {
         let players: Array<RichEntity> = new Array();
@@ -231,15 +235,17 @@ export class EntityRenderer {
 
     }
 
-    updateEntityStore(): void {
-        let entities = this.map
+    move(e: Entity, x: number, y: number, xx: number, yy: number): void {
+        if (this.remove(e, x, y)) {
+            this.put(e, xx, yy);
+        }
     }
 
     key(x: number, y: number): string {
         return `${x}-${y}`
     }
 
-    remove(e: Entity, x: number, y: number): void {
+    remove(e: Entity, x: number, y: number): boolean {
         let key = this.key(x, y)
         let stack = this.map.get(key)
         if (stack !== undefined) {
@@ -249,6 +255,9 @@ export class EntityRenderer {
             } else {
                 this.map.delete(key)
             }
+            return true;
+        } else {
+            return false;
         }
     }
 

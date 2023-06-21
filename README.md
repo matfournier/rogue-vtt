@@ -9,7 +9,7 @@ Extremely alpha:
 
 - barebones client is in 
   - just enough UI to generate the events to send/recieve to the server for most functionality 
-  - you start in view mode (d).  Clicking moves the camera.  Arrow keys moves the camera 
+  - you start in view mode (v).  Clicking moves the camera.  Arrow keys moves the camera 
   - press (d) to move into draw mode: 
     - press (1) to bring up the dungeon floor/wall picker 
     - click on tiles to draw them

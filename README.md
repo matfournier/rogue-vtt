@@ -7,6 +7,9 @@ Server: Rust
 
 Extremely alpha: 
 
+![current_status](alpha.png)
+
+
 - barebones client is in 
   - just enough UI to generate the events to send/recieve to the server for most functionality 
   - you start in view mode (v).  Clicking moves the camera.  Arrow keys moves the camera 

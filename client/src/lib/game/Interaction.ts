@@ -153,22 +153,6 @@ export type GameEvent = {
 
 export type Event = DisplayEvent | GameEvent
 
-/*
-
-
-Display Events 
-
-Camera mova event <- not sure?
-Draw yellow cursor event  // replaced by render
-Draw red cursor event // replace by render 
-Change mode (explore -> move perhaps?)
-ConvertHandler -> e.g. ViewHandler -> MoveHandler
-Reset event
-
-
-
-*/
-
 // all xy coordinates are MAP coordinators, not canvas coordinatoes 
 export interface InteractionHandler {
     onClick?(xy: [number, number]): void

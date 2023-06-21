@@ -43,9 +43,6 @@
 	let paletteSelected;
 	let interfaceHandler;
 
-	// const mouseMode = new MouseMode();
-	// let clickBounds; // when someone clicks, decide if you should try a single or multiple tile
-
 	let stores;
 
 	let camera;
@@ -53,14 +50,10 @@
 	let context;
 	let selectedMapTile;
 	let mode;
-	// let map;
 	let entities;
 	let es;
 	let t, l;
 	let mapFocus = true;
-
-	// has modal from a text box I think.
-	//	https://svelte.dev/repl/b95ce66b0ef34064a34afc5c0249f313?version=3.59.1
 
 	const defaultCanvas = (tile) => {
 		const tiledBackgroundCanvas = document.createElement("canvas");
@@ -127,15 +120,6 @@
 
 	function onKeyDown(e) {
 		interfaceHandler.onKeyDown(e);
-		// if (mapFocus) {
-		// 	console.log(e.key);
-		// 	switch (e.keyCode) {
-		// 		case 27: // esc
-		// 			modeReset();
-		// 			draw();
-		// 			break;
-		// 	}
-		// }
 	}
 
 	function onKeyUp(e) {
@@ -170,10 +154,7 @@
 		handleEvent(interfaceHandler.onClick(selectedMapTile));
 	};
 
-	const modeReset = () => {
-		// mouseMode.reset();
-		// clickBounds = undefined;
-	};
+	const modeReset = () => {};
 
 	const handleEvent = (e) => {
 		if (e !== undefined && e[0] !== undefined) {
@@ -236,16 +217,7 @@
 	const draw = () => {
 		context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 		es.render(context);
-		// entities.render(context);
 		interfaceHandler.render(context);
-
-		// if (mouseMode.get().major !== "SELECTION") {
-		// 	tileSheet.icon.renderCursor(context, selectedMapTile);
-		// } else {
-		// 	tileSheet.icon.renderSelectionCursor(context, selectedMapTile);
-		// }
-
-		// context.fillStyle = pattern;
 	};
 
 	const handleEnd = () => {
@@ -254,8 +226,8 @@
 	};
 
 	const handleExit = () => {
-		// modeReset();
-		// draw();
+		handleEvent(interfaceHandler.onLeave());
+		draw();
 	};
 
 	const viewHandlerFactory = (s) => {
@@ -291,29 +263,7 @@
 			canvasTile[1] + camera.topY,
 		]; //
 		interfaceHandler.onMove(selectedMapTile);
-
 		draw();
-
-		// let mode = mouseMode.get();
-		// if (mode.major === "RANGE") {
-		// 	clickBounds.lim(selectedMapTile);
-		// 	let bounds = clickBounds.bounds();
-		// 	draw();
-
-		// 	// this doesn't quite work, it flickers a ton.
-		// 	// need to make another class that is handling this OR NOTHING
-		// 	// in the drawTile
-		// 	context.fillStyle = "blue";
-		// 	context.globalAlpha = 0.25;
-		// 	context.fillRect(
-		// 		bounds.x[0] * 24,
-		// 		bounds.y[0] * 24,
-		// 		bounds.x[1] * 24 + 24 - bounds.x[0] * 24,
-		// 		bounds.y[1] * 24 + 24 - bounds.y[0] * 24
-		// 	);
-		// 	context.fillStyle = pattern;
-		// 	context.globalAlpha = 1;
-		// }
 	};
 
 	const handleSize = () => {

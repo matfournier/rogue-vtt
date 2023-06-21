@@ -113,18 +113,11 @@ export async function tilesheets(): Promise<Tilesheets> {
 
 async function loadImages(imageUrlArray: Array<{ "name": string, "src": string, numTiles: number }>): Promise<Tilesheets> {
     const promiseArray: Array<Promise<{ "name": string, ts: Tilesheet }>> = []; // create an array for promises
-
     for (let imageUrl of imageUrlArray) {
-
         promiseArray.push(new Promise(resolve => {
             const img = new Image();
-            // if you don't need to do anything when the image loads,
-            // then you can just write img.onload = resolve;
-
             img.onload = function () {
-                // do stuff with the image if necessary
                 let ts = new Tilesheet(imageUrl.numTiles, img)
-                // resolve the promise, indicating that the image has been loaded
                 resolve({ "name": imageUrl.name, "ts": ts });
             };
 

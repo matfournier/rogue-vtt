@@ -2,11 +2,6 @@ import type { Camera } from "../game/Camera";
 import type { Entity } from "./EntityRenderer";
 import { type Tilesheets } from "./Tilesheet";
 
-
-// should we have a second tileset where we invert the grid border so people can see the grid more easily
-// or should we be able to draw it using the canvas a series of lines? 
-//   ^-- try this. 
-
 export class MapState {
     private camera: Camera;
     private height: number;
@@ -16,7 +11,6 @@ export class MapState {
 
     private gfx: Tilesheets;
     private readonly tileSize: number;
-    // actors be Map<string, Array<number>> ? 
 
     constructor(columns: number, rows: number, tileSheets: Tilesheets, camera: Camera) {
         this.height = rows;
@@ -64,88 +58,6 @@ export class MapState {
         let y = Math.floor(idx / this.width)
         return [x, y]
     }
-
-    // render(context: CanvasRenderingContext2D): void {
-    //     // dungeon 
-    //     for (let x = this.camera.leftX; x <= this.camera.rightX; x++) {
-    //         for (let y = this.camera.topY; y <= this.camera.bottomY; y++) {
-    //             let tile = this.dungeon[this.mapIdx(x, y)];
-    //             let tileSprite = this.gfx.dungeon.tiles[tile]
-    //             if (tile !== undefined) {
-    //                 let src = this.gfx.dungeon.src;
-    //                 context.drawImage(
-    //                     src,
-    //                     tileSprite.sx,
-    //                     tileSprite.sy,
-    //                     this.tileSize,
-    //                     this.tileSize,
-    //                     (x - this.camera.leftX) * this.tileSize,
-    //                     (y - this.camera.topY) * this.tileSize,
-    //                     this.tileSize,
-    //                     this.tileSize
-    //                 );
-    //             }
-    //             let key = this.key(x, y);
-    //             let featureTile = this.features.get(key)
-    //             if (featureTile !== undefined) {
-    //                 let tileSprite = this.gfx.feature.tiles[featureTile]
-    //                 context.drawImage(
-    //                     this.gfx.feature.src,
-    //                     tileSprite.sx,
-    //                     tileSprite.sy,
-    //                     this.tileSize,
-    //                     this.tileSize,
-    //                     (x - this.camera.leftX) * this.tileSize,
-    //                     (y - this.camera.topY) * this.tileSize,
-    //                     this.tileSize,
-    //                     this.tileSize
-    //                 );
-    //             }
-
-    //         }
-    //     }
-
-    //     // this.dungeon.forEach((tile, i) => {
-    //     //     let dim = this.gfx.dungeon.tiles[tile];
-    //     //     let src = this.gfx.dungeon.src;
-    //     //     let [canvasX, canvasY] = this.idxToCoords(i);
-    //     //     context.drawImage(
-    //     //         src,
-    //     //         dim.sx,
-    //     //         dim.sy,
-    //     //         this.tileSize,
-    //     //         this.tileSize,
-    //     //         canvasX * this.tileSize,
-    //     //         canvasY * this.tileSize,
-    //     //         this.tileSize,
-    //     //         this.tileSize
-    //     //     );
-    //     // });
-
-    //     // // features 
-
-    //     // this.features.forEach((tile, key) => {
-    //     //     let dim = this.gfx.feature.tiles[tile];
-    //     //     let src = this.gfx.feature.src;
-    //     //     let [canvasX, canvasY] = this.keyToNumber(key);
-    //     //     context.drawImage(
-    //     //         src,
-    //     //         dim.sx,
-    //     //         dim.sy,
-    //     //         this.tileSize,
-    //     //         this.tileSize,
-    //     //         canvasX * this.tileSize,
-    //     //         canvasY * this.tileSize,
-    //     //         this.tileSize,
-    //     //         this.tileSize
-    //     //     );
-    //     // });
-
-
-    //     // actors 
-
-    //     // players ? 
-    // }
 
     render(context: CanvasRenderingContext2D, x: number, y: number): void {
         // dungeon 

@@ -271,20 +271,6 @@ export class EntityRenderer {
         })
     }
 
-    // render(context: CanvasRenderingContext2D): void {
-    //     let palette = context.fillStyle
-
-    //     this.map.forEach((stack, coords) => {
-    //         const xy = this.idx(coords)
-    //         let colour = this.colours.get(stack.stackType.toString())
-    //         context.fillStyle = colour
-    //         context.fillText(stack.c, (xy[0] * 24) + 4, (xy[1] * 24) + 19)
-    //     })
-
-    //     context.fillStyle = palette
-
-    // }
-
     render(context: CanvasRenderingContext2D, x: number, y: number): void {
         // let palette = context.fillStyle
         let stack = this.map.get(this.key(x, y));

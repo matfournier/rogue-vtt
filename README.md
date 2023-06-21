@@ -2,6 +2,12 @@
 
 A multi-user dungeon mapping system for OSR games in the style of nethack/dcss
 
+Goals: a shared battlemap for live dungeon mapping during online play.
+
+- no character sheets / no logic
+- just shared mapping to get a sense of the space
+- not meant for pre-made maps 
+
 Client: Typescript/svelte + websockets
 Server: Rust 
 

@@ -5,7 +5,7 @@ A multi-user dungeon mapping system for OSR games in the style of nethack/dcss
 Client: Typescript/svelte + websockets
 Server: Rust 
 
-Extremely alpha: 
+Extremely, extremely alpha: 
 
 ![current_status](alpha.png)
 

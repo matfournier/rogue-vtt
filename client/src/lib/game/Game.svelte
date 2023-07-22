@@ -54,6 +54,7 @@
 	let es;
 	let t, l;
 	let mapFocus = true;
+	let serverCall;
 
 	const defaultCanvas = (tile) => {
 		const tiledBackgroundCanvas = document.createElement("canvas");
@@ -77,7 +78,7 @@
 		return tiledBackgroundCanvas;
 	};
 
-	onMount(() => {
+	onMount(async () => {
 		selectedMapTile = [0, 0];
 		camera = new Camera(
 			[selectedMapTile[0], selectedMapTile[1]],
@@ -110,6 +111,13 @@
 				handleEvent(events);
 			}),
 		};
+
+		fetch("http://localhost:3000/hello")
+			.then((response) => response.json())
+			.then((result) => {
+				serverCall = result.name;
+				console.log(result);
+			});
 	});
 
 	const teardown = () => {
@@ -320,6 +328,8 @@
 <Modal>
 	<!-- <EntityPicker {entities} /> -->
 </Modal>
+
+<p>{serverCall}</p>
 
 <style>
 	div.main {

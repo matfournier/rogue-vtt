@@ -23,6 +23,10 @@ export class MapState {
         this.tileSize = 24;
     }
 
+    // toJSON(): void {
+    //     console.log("{hah}");
+    // }
+
     addDungeon(x: number, y: number, tileIndex: number): void {
         this.dungeon[this.mapIdx(x, y)] = tileIndex;
     }

@@ -4,9 +4,16 @@
 //! cargo run -p example-form
 //! ```
 
-use axum::{extract::Form, response::Html, routing::get, Router};
-use serde::Deserialize;
+use axum::{
+    extract::Form,
+    http::Method,
+    response::{Html, IntoResponse, Json, Response},
+    routing::get,
+    Router,
+};
+use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -19,8 +26,17 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    let cors = CorsLayer::new()
+        // allow `GET` and `POST` when accessing the resource
+        .allow_methods([Method::GET, Method::POST])
+        // allow requests from any origin
+        .allow_origin(Any);
+
     // build our application with some routes
-    let app = Router::new().route("/", get(show_form).post(accept_form));
+    let app = Router::new()
+        .route("/", get(show_form).post(accept_form))
+        .route("/hello", get(show_hello))
+        .layer(cors);
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -29,6 +45,19 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+#[derive(Serialize)]
+struct Hello {
+    name: String,
+}
+
+async fn show_hello() -> Response {
+    let hello = Hello {
+        name: String::from("world"),
+    };
+
+    Json(hello).into_response()
 }
 
 async fn show_form() -> Html<&'static str> {

@@ -1,4 +1,4 @@
-<script>
+<!-- <script>
     import { getContext } from "svelte";
     import EntityForm from "./EntityForm.svelte";
 
@@ -54,4 +54,4 @@
 		opacity: 0.33;
 		font-size: 0.8em;
 	} */
-</style>
+</style> -->

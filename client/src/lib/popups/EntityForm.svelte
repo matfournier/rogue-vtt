@@ -5,7 +5,6 @@
     import { ActionType, EventType } from "../game/Interaction";
     const { close } = getContext("simple-modal");
 
-    export let entities;
     export let xy;
     export let callback;
     let characterValue = "";

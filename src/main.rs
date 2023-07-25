@@ -4,6 +4,12 @@
 //! cargo run -p example-form
 //! ```
 
+// mod domain;
+
+// mod prelude {
+//     pub use crate::domain::Player;
+// }
+
 use axum::{
     extract::Form,
     http::Method,

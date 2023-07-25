@@ -20,7 +20,8 @@ export enum ActionType {
     TokenDescription,
     RemoveToken,
     RenameToken,
-    MoveToken
+    MoveToken,
+    Init
 }
 
 export enum UActionType {
@@ -93,8 +94,15 @@ export type MoveTokenAction = {
     to: [number, number]
 }
 
+// Only generated server side
+export type InitAction = {
+    kind: ActionType.Init
+    xy: [number, number]
+    id: String
+}
+
 export type Action = TilePlacedAction | TileRemovedAction | FillAction |
-    ClearAction | AddTokenAction | TokenDescriptionAction | RemoveTokenAction | MoveTokenAction
+    ClearAction | AddTokenAction | TokenDescriptionAction | RemoveTokenAction | MoveTokenAction | InitAction
 
 
 export type ResetUAction = {

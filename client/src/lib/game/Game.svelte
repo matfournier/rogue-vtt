@@ -38,6 +38,8 @@
 
 	export let background = "#fff";
 
+	export let render;
+
 	let pattern;
 
 	let paletteSelected;
@@ -291,45 +293,47 @@
 	on:keyup={onKeyUp}
 />
 
-<div class="main">
-	<div>
-		<canvas
-			class="game"
-			{width}
-			{height}
-			style:background
-			bind:this={canvas}
-			on:mousedown={handleStart}
-			on:touchstart={handleStart}
-			on:mouseup={handleEnd}
-			on:touchend={handleEnd}
-			on:mouseleave={handleExit}
-			on:mousemove={handleMove}
-			on:touchmove={(e) => {
-				const { clientX, clientY } = e.touches[0];
-				handleMove({
-					offsetX: clientX - l,
-					offsetY: clientY - t,
-				});
-			}}
-		/>
+{#if render}
+	<div class="main">
+		<div>
+			<canvas
+				class="game"
+				{width}
+				{height}
+				style:background
+				bind:this={canvas}
+				on:mousedown={handleStart}
+				on:touchstart={handleStart}
+				on:mouseup={handleEnd}
+				on:touchend={handleEnd}
+				on:mouseleave={handleExit}
+				on:mousemove={handleMove}
+				on:touchmove={(e) => {
+					const { clientX, clientY } = e.touches[0];
+					handleMove({
+						offsetX: clientX - l,
+						offsetY: clientY - t,
+					});
+				}}
+			/>
+		</div>
+		<div class="sidebar">
+			<Sidebar />
+			<!-- <p>some content</p> -->
+		</div>
 	</div>
-	<div class="sidebar">
-		<Sidebar />
-		<!-- <p>some content</p> -->
-	</div>
-</div>
-<Toolbar bind:tilePos={selectedMapTile} bind:modeString={mode} />
-<Modal show={$modal}>
-	<!-- <TilePicker {tileSheet} /> -->
-</Modal>
+	<Toolbar bind:tilePos={selectedMapTile} bind:modeString={mode} />
+	<Modal show={$modal}>
+		<!-- <TilePicker {tileSheet} /> -->
+	</Modal>
 
-<!-- // need to figure out how to share this better. -->
-<Modal>
-	<!-- <EntityPicker {entities} /> -->
-</Modal>
+	<!-- // need to figure out how to share this better. -->
+	<Modal>
+		<!-- <EntityPicker {entities} /> -->
+	</Modal>
 
-<p>{serverCall}</p>
+	<p>{serverCall}</p>
+{/if}
 
 <style>
 	div.main {

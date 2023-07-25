@@ -24,4 +24,4 @@ dist-ssr
 *.sw?
 *.code-workspace
 
-/server/target
+/target

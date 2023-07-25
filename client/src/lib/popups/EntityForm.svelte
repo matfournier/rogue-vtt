@@ -1,6 +1,5 @@
 <script>
-    import { getContext } from "svelte";
-    import { onDestroy } from "svelte";
+    import { getContext, onDestroy } from "svelte";
     import { EntityType } from "../domain/EntityRenderer";
     import { entityEventStore } from "../stores/UI";
     import { ActionType, EventType } from "../game/Interaction";

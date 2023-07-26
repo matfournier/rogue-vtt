@@ -49,7 +49,7 @@ export class Camera {
     down(): void {
         this.topY += 1;
         this.bottomY += 1;
-        this.snap;
+        this.snap();
     }
 
     up(): void {

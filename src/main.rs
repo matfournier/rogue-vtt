@@ -4,7 +4,7 @@
 //! cargo run -p example-form
 //! ```
 
-// mod domain;
+mod domain;
 
 // mod prelude {
 //     pub use crate::domain::Player;
@@ -42,6 +42,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(show_form).post(accept_form))
         .route("/hello", get(show_hello))
+        .route("/init", get(init_map))
         .layer(cors);
 
     // run it with hyper
@@ -64,6 +65,11 @@ async fn show_hello() -> Response {
     };
 
     Json(hello).into_response()
+}
+
+async fn init_map() -> Json<domain::messages::InitMap> {
+    let map = domain::messages::InitMap::default("SomeIdHere".to_string());
+    Json(map)
 }
 
 async fn show_form() -> Html<&'static str> {

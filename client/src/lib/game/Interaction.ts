@@ -42,6 +42,7 @@ export enum InteractionType {
     Place
 }
 
+
 export type TilePlacedAction = {
     kind: ActionType.TilePlaced
     xy: [number, number]
@@ -99,6 +100,10 @@ export type InitAction = {
     kind: ActionType.Init
     xy: [number, number]
     id: String
+}
+
+export function toInitAction(from: any): InitAction {
+    return from as InitAction
 }
 
 export type Action = TilePlacedAction | TileRemovedAction | FillAction |

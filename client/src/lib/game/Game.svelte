@@ -23,13 +23,13 @@
 		PlaceHandler,
 		UActionType,
 		ViewHandler,
+		toInitAction,
 	} from "./Interaction";
 	import { Camera } from "./Camera";
 	import { LocalEventSystem } from "../domain/EventSystem";
 	import Sidebar from "../Sidebar.svelte";
 
 	const tileSize = 24;
-	const mapSize = [200, 200];
 	const cameraDimensions = [56, 32];
 
 	export let width = cameraDimensions[0] * tileSize;
@@ -81,44 +81,53 @@
 	};
 
 	onMount(async () => {
-		selectedMapTile = [0, 0];
-		camera = new Camera(
-			[selectedMapTile[0], selectedMapTile[1]],
-			cameraDimensions[0],
-			cameraDimensions[1],
-			mapSize[0],
-			mapSize[1]
-		);
-		viewHandlerFactory("RESET");
-
-		let map = new MapState(mapSize[0], mapSize[1], tileSheet, camera);
-		entities = new EntityState(camera);
-		es = new LocalEventSystem(map, entities, camera);
-		// TODO: this default canvas stuff should move somewhere else.
-		let defaultTile = tileSheet.dungeon.tiles[101];
-		context = canvas.getContext("2d");
-		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
-		context.fillStyle = pattern;
-		context.font = "18pt Monospace";
-		handleSize();
-		draw();
-		stores = {
-			selected: selectedTileStore.subscribe((value) => {
-				paletteSelected = value;
-				if (interfaceHandler !== undefined) {
-					interfaceHandler.update(value);
-				}
-			}),
-			entityEvents: entityEventStore.subscribe((events) => {
-				handleEvent(events);
-			}),
-		};
-
-		fetch("http://localhost:3000/hello")
+		fetch("http://localhost:3000/init")
 			.then((response) => response.json())
 			.then((result) => {
-				serverCall = result.name;
-				console.log(result);
+				let initAction = toInitAction(result);
+				let mapSize = initAction.xy;
+
+				console.log(mapSize);
+				selectedMapTile = [0, 0];
+				camera = new Camera(
+					[selectedMapTile[0], selectedMapTile[1]],
+					cameraDimensions[0],
+					cameraDimensions[1],
+					mapSize[0],
+					mapSize[1]
+				);
+				viewHandlerFactory("RESET");
+
+				let map = new MapState(
+					mapSize[0],
+					mapSize[1],
+					tileSheet,
+					camera
+				);
+				entities = new EntityState(camera);
+				es = new LocalEventSystem(map, entities, camera);
+				// TODO: this default canvas stuff should move somewhere else.
+				let defaultTile = tileSheet.dungeon.tiles[101];
+				context = canvas.getContext("2d");
+				pattern = context.createPattern(
+					defaultCanvas(defaultTile),
+					"repeat"
+				);
+				context.fillStyle = pattern;
+				context.font = "18pt Monospace";
+				handleSize();
+				stores = {
+					selected: selectedTileStore.subscribe((value) => {
+						paletteSelected = value;
+						if (interfaceHandler !== undefined) {
+							interfaceHandler.update(value);
+						}
+					}),
+					entityEvents: entityEventStore.subscribe((events) => {
+						handleEvent(events);
+					}),
+				};
+				draw();
 			});
 	});
 

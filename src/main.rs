@@ -42,7 +42,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(show_form).post(accept_form))
         .route("/hello", get(show_hello))
-        .route("/init", get(init_map))
+        .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
         .layer(cors);
 
     // run it with hyper

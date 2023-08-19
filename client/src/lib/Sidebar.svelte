@@ -10,7 +10,7 @@
         <SidebarGlyph
             entity={player.entity}
             glpyh={player.entity.c}
-            description={player.description}
+            description={player.entity.description}
             xy={player.xy}
             colour={player.colour}
         />
@@ -21,7 +21,7 @@
         <SidebarGlyph
             entity={npc.entity}
             glpyh={npc.entity.c}
-            description={npc.description}
+            description={npc.entity.description}
             xy={npc.xy}
             colour={npc.colour}
         />

@@ -9,6 +9,7 @@
     export let callback;
     let characterValue = "";
     let tokens = 1;
+    export let entities;
 
     function onSubmit(e) {
         const formData = new FormData(e.target);
@@ -25,14 +26,7 @@
                 c: data.character,
                 type: entityType(data.token),
                 id: Math.floor(Date.now() + Math.random() * 2000000).toString(), // move serverside
-            };
-
-            // todo: differentiate between entities that already exist and those that don't
-            let labelAction = {
-                kind: ActionType.TokenDescription,
-                side: entityType(data.token),
-                token: data.character,
-                desc: data.description,
+                description: data.description,
             };
 
             let entityAction = {
@@ -42,7 +36,6 @@
             };
 
             let gameEvents = [];
-            gameEvents.push({ type: EventType.GAME, action: labelAction });
             gameEvents.push({ type: EventType.GAME, action: entityAction });
 
             entityEventStore.set(gameEvents);

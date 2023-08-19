@@ -10,12 +10,12 @@ export type Entity = {
     c: string
     type: EntityType
     id: string // TODO this should come from the server/.
+    description: string
 }
 
 export type RichEntity = {
     entity: Entity
     xy: [number, number]
-    description: string
     colour: string
 }
 
@@ -110,13 +110,11 @@ class Stack {
 
 export class EntityState {
     private state: EntityRenderer
-    labels: Map<string, string>
     colours: Map<string, string>
 
     constructor(camera: Camera) {
-        this.labels = new Map()
         this.colours = new Map()
-        this.state = new EntityRenderer(this.colours, this.labels, camera)
+        this.state = new EntityRenderer(this.colours, camera)
         this.colours.set("0", "#348feb") // pc 
         this.colours.set("1", "white") // pcs 
         this.colours.set("2", "yellow") // npc 
@@ -126,12 +124,6 @@ export class EntityState {
 
     list(x: number, y: number): Stack | undefined {
         return this.state.map.get(this.state.key(x, y));
-    }
-
-    updateLabel(c: string, description: string) {
-        this.labels.set(c, description);
-        this.updateEntityStore();
-
     }
 
     addEntity(entity: Entity, x: number, y: number) {
@@ -147,7 +139,6 @@ export class EntityState {
 
     removeAll(entity: Entity) {
         this.state.removeAll(entity)
-        this.labels.delete(entity.c)
         this.updateEntityStore();
     }
 
@@ -170,13 +161,12 @@ export class EntityState {
         this.state.map.forEach((stack, coord) => {
             let xy = this.idx(coord);
             stack.stack.forEach(entity => {
-                let description = this.labels.get(entity.c)
                 if (entity.type === EntityType.PLAYER) {
                     let colour = this.colours.get("0");
-                    players.push({ entity: entity, xy: xy, description: description, colour: colour });
+                    players.push({ entity: entity, xy: xy, colour: colour });
                 } else {
                     let colour = this.colours.get("2");
-                    npcs.push({ entity: entity, xy: xy, description: description, colour: colour });
+                    npcs.push({ entity: entity, xy: xy, colour: colour });
                 }
             })
         }
@@ -212,13 +202,11 @@ export class EntityState {
 
 export class EntityRenderer {
     map: Map<string, Stack>
-    labels: Map<string, string> // "g" -> "goblin" TODO need a different one for PCs and NPCs
     colours: Map<string, string> // "npc" -> colour 
     camera: Camera
 
-    constructor(colours: Map<string, string>, labels: Map<string, string>, camera: Camera) {
+    constructor(colours: Map<string, string>, camera: Camera) {
         this.map = new Map()
-        this.labels = labels;
         this.colours = colours;
         this.camera = camera;
     }

@@ -17,7 +17,7 @@ export enum ActionType {
     Fill,
     Clear,
     AddToken,
-    TokenDescription,
+    // TokenDescription,
     RemoveToken,
     RenameToken,
     MoveToken,
@@ -75,12 +75,15 @@ export type AddTokenAction = {
     xy: [number, number]
 }
 
-export type TokenDescriptionAction = {
-    kind: ActionType.TokenDescription
-    side: EntityType
-    token: string
-    desc: string
-}
+
+// We will want some way to update an entity description
+// cross that bridge when it comes 
+// export type TokenDescriptionAction = {
+//     kind: ActionType.TokenDescription
+//     side: EntityType
+//     token: string
+//     desc: string
+// }
 
 export type RemoveTokenAction = {
     kind: ActionType.RemoveToken
@@ -107,7 +110,7 @@ export function toInitAction(from: any): InitAction {
 }
 
 export type Action = TilePlacedAction | TileRemovedAction | FillAction |
-    ClearAction | AddTokenAction | TokenDescriptionAction | RemoveTokenAction | MoveTokenAction | InitAction
+    ClearAction | AddTokenAction | RemoveTokenAction | MoveTokenAction | InitAction
 
 
 export type ResetUAction = {
@@ -497,6 +500,9 @@ export class PlaceHandler implements InteractionHandler {
         return [];
     }
     onEnd?(xy: [number, number]): Event[] {
+        return [];
+    }
+    onLeave?(xy: [number, number]): Array<Event> {
         return [];
     }
     onKeyDown(e: KeyboardEvent): Event[] {

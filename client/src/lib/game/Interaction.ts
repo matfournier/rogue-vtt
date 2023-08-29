@@ -21,7 +21,8 @@ export enum ActionType {
     RemoveToken,
     RenameToken,
     MoveToken,
-    Init
+    Init,
+    Load,
 }
 
 export enum UActionType {
@@ -42,6 +43,10 @@ export enum InteractionType {
     Place
 }
 
+// todo.
+export type LoadAction = {
+    xy: [number, number]
+}
 
 export type TilePlacedAction = {
     kind: ActionType.TilePlaced
@@ -104,6 +109,28 @@ export type InitAction = {
     xy: [number, number]
     id: String
 }
+
+// export type Tile = {
+//     x: number,
+//     y: number,
+//     idx: number
+// }
+
+// export type Level = {
+//     description: String,
+//     id: String,
+//     dimension: [number, number],
+//     tiles: Array<Tile>,
+//     features: Array<Tile>
+// }
+
+// export type Entities = {
+
+// }
+// // export type LoadAction = {
+// //     kind: ActionType.Load
+
+// // }
 
 export function toInitAction(from: any): InitAction {
     return from as InitAction

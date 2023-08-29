@@ -1,8 +1,11 @@
 import type { Camera } from "../game/Camera";
+import type { Level, Tile } from "../transfer/Transfer";
 import type { Entity } from "./EntityRenderer";
 import { type Tilesheets } from "./Tilesheet";
 
 export class MapState {
+    private id: String; // fix 
+    private description: String; // fix
     private camera: Camera;
     private height: number;
     private width: number;
@@ -12,7 +15,9 @@ export class MapState {
     private gfx: Tilesheets;
     private readonly tileSize: number;
 
-    constructor(columns: number, rows: number, tileSheets: Tilesheets, camera: Camera) {
+    constructor(columns: number, rows: number, tileSheets: Tilesheets, camera: Camera, id: String, description: String) {
+        this.id = id;
+        this.description = description;
         this.height = rows;
         this.width = columns;
         this.dungeon = Array(columns * rows)
@@ -102,5 +107,40 @@ export class MapState {
 
     }
 
+    public toLevel(): Level {
+        let dungeonTiles = new Array<Tile>;
+        let dungeonFeatures = new Array<Tile>;
+        for (let i = 0; i < this.dungeon.length; i++) {
+            let tile = this.dungeon[i];
+            if (tile !== undefined) {
+                let coords = this.idxToCoords(i);
+                dungeonTiles.push({ x: coords[0], y: coords[1], idx: tile })
+            }
+        }
+        this.features.forEach((idx, coord) => {
+            let coords = this.keyToNumber(coord)
+            dungeonFeatures.push({ x: coords[0], y: coords[1], idx: idx })
+        });
+        return {
+            description: this.description,
+            id: this.id,
+            dimension: [this.width, this.height],
+            tiles: dungeonTiles,
+            features: dungeonFeatures
+        }
+    }
+}
 
+export function dungeonMapFrom(level: Level, tileSheets: Tilesheets, camera: Camera): MapState {
+    let state = new MapState(
+        level.dimension[0],
+        level.dimension[1],
+        tileSheets,
+        camera,
+        level.id,
+        level.description
+    );
+    level.tiles.forEach(t => state.addDungeon(t.x, t.y, t.idx));
+    level.features.forEach(f => state.addFeature(f.x, f.y, f.idx));
+    return state;
 }

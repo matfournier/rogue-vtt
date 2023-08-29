@@ -74,7 +74,7 @@ export class SquareCounter {
         }
 
         return res
-
-
     }
+
+
 }

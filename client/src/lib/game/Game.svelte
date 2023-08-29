@@ -3,7 +3,7 @@
 	import { onMount } from "svelte";
 	import { Grid, SquareCounter } from "../domain/Grid";
 	import Toolbar from "../Toolbar.svelte";
-	import { MapState } from "../domain/DungeonMap";
+	import { MapState, dungeonMapFrom } from "../domain/DungeonMap";
 	import TilePicker from "../popups/TilePicker.svelte";
 	import EntityPicker from "../popups/EntityPicker.svelte";
 	import { modal } from "../stores/UI";
@@ -28,6 +28,7 @@
 	import { Camera } from "./Camera";
 	import { LocalEventSystem } from "../domain/EventSystem";
 	import Sidebar from "../Sidebar.svelte";
+	import { parse } from "../transfer/Transfer";
 
 	const tileSize = 24;
 	const cameraDimensions = [56, 32];
@@ -46,6 +47,7 @@
 	let interfaceHandler;
 
 	let stores;
+	let map; // temporary, remove this later when you do saving properly.
 
 	let camera;
 	let canvas;
@@ -81,11 +83,15 @@
 	};
 
 	onMount(async () => {
-		fetch("http://localhost:3000/init")
+		fetch("http://localhost:3000/load")
 			.then((response) => response.json())
 			.then((result) => {
-				let initAction = toInitAction(result);
-				let mapSize = initAction.xy;
+				console.log(result);
+
+				let gs = parse(result);
+				console.log(gs);
+				// let initAction = toInitAction(result);
+				let mapSize = gs.level.dimension;
 
 				console.log(mapSize);
 				selectedMapTile = [0, 0];
@@ -98,12 +104,16 @@
 				);
 				viewHandlerFactory("RESET");
 
-				let map = new MapState(
-					mapSize[0],
-					mapSize[1],
-					tileSheet,
-					camera
-				);
+				map = dungeonMapFrom(gs.level, tileSheet, camera);
+
+				// let map = new MapState(
+				// 	mapSize[0],
+				// 	mapSize[1],
+				// 	tileSheet,
+				// 	camera,
+				// 	"someId",
+				// 	"someDescription"
+				// );
 				entities = new EntityState(camera);
 				es = new LocalEventSystem(map, entities, camera);
 				// TODO: this default canvas stuff should move somewhere else.
@@ -290,6 +300,23 @@
 		t = top;
 		l = left;
 	};
+
+	// tmep while figuring out saving
+	async function tempDoPost() {
+		console.log("clicked");
+		let level = map.toLevel();
+		const res = await fetch("http://localhost:3000/save", {
+			method: "POST",
+			body: JSON.stringify(level),
+			mode: "cors", // no-cors, *cors, same-origin
+			headers: {
+				"Content-Type": "application/json",
+			},
+			credentials: "same-origin", // include, *same-origin, omit
+		});
+		const status = await res.status;
+		console.log(status);
+	}
 </script>
 
 <!-- THIS IS STILL TRIGGERING on:keydown EVERYWHERE need to figure this out. -->
@@ -342,6 +369,7 @@
 	</Modal>
 
 	<p>{serverCall}</p>
+	<button type="button" on:click={tempDoPost}>Temp Save</button>
 {/if}
 
 <style>

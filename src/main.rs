@@ -12,11 +12,14 @@ mod domain;
 
 use axum::{
     extract::Form,
-    http::Method,
-    response::{Html, IntoResponse, Json, Response},
+    extract::Json,
+    http::{Method, StatusCode},
+    response::{Html, IntoResponse, Response},
     routing::get,
+    routing::post,
     Router,
 };
+use domain::messages::Level;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
@@ -36,13 +39,16 @@ async fn main() {
         // allow `GET` and `POST` when accessing the resource
         .allow_methods([Method::GET, Method::POST])
         // allow requests from any origin
-        .allow_origin(Any);
+        .allow_origin(Any)
+        .allow_headers(Any);
 
     // build our application with some routes
     let app = Router::new()
         .route("/", get(show_form).post(accept_form))
         .route("/hello", get(show_hello))
         .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
+        .route("/load", get(load_map))
+        .route("/save", post(save_map))
         .layer(cors);
 
     // run it with hyper
@@ -70,6 +76,20 @@ async fn show_hello() -> Response {
 async fn init_map() -> Json<domain::messages::InitMap> {
     let map = domain::messages::InitMap::default("SomeIdHere".to_string());
     Json(map)
+}
+
+async fn load_map() -> Json<domain::messages::GameState> {
+    let gamestate = domain::messages::GameState::make("Some Description".to_string(), (250, 250));
+    Json(gamestate)
+}
+
+// async fn save_map(body: String) {
+//     dbg!(body);
+// }
+
+async fn save_map(Json(level): Json<Level>) -> Response {
+    dbg!(level);
+    StatusCode::OK.into_response()
 }
 
 async fn show_form() -> Html<&'static str> {

@@ -40,8 +40,21 @@ Plan:
 - come back and make the UI not janky 
 
 
-## Getting start 
+## Getting started
+
+This isn't ready for prod yet, still heavy in local development. 
+
+We fire up svelte/vite so we get good svelte error messages.  But this means our JS is being served by one webserver while the rust app also serves some routes, which is not how it will be in prod. 
+
+Regardless: 
 
 - Clone this repo 
-- go to `/client` and run `npm install` followed by `npm run dev` 
+- go to `/client` and run `npm install` followed by `npm run dev` to fire up the vite server to serve the JS 
+- install rust 
+- cargo run in the main repo to build + compile the server 
+
+The two things will chat to each other. 
+
+<<todo>> eventually replace this with better instructions 
+
 

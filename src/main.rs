@@ -82,11 +82,6 @@ async fn load_map() -> Json<domain::messages::GameState> {
     let gamestate = domain::messages::GameState::make("Some Description".to_string(), (250, 250));
     Json(gamestate)
 }
-
-// async fn save_map(body: String) {
-//     dbg!(body);
-// }
-
 async fn save_map(Json(level): Json<Level>) -> Response {
     dbg!(level);
     StatusCode::OK.into_response()

@@ -20,7 +20,7 @@ use axum::{
     routing::post,
     Router,
 };
-use domain::messages::Level;
+use domain::Game::Level;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tokio::sync::mpsc;
@@ -94,13 +94,13 @@ async fn show_hello() -> Response {
     Json(hello).into_response()
 }
 
-async fn init_map() -> Json<domain::messages::InitMap> {
-    let map = domain::messages::InitMap::default("SomeIdHere".to_string());
+async fn init_map() -> Json<domain::Game::InitMap> {
+    let map = domain::Game::InitMap::default("SomeIdHere".to_string());
     Json(map)
 }
 
-async fn load_map() -> Json<domain::messages::GameState> {
-    let gamestate = domain::messages::GameState::make("Some Description".to_string(), (250, 250));
+async fn load_map() -> Json<domain::Game::GameState> {
+    let gamestate = domain::Game::GameState::make("Some Description".to_string(), (250, 250));
     Json(gamestate)
 }
 async fn save_map(State(state): State<HandlerState>, Json(level): Json<Level>) -> Response {

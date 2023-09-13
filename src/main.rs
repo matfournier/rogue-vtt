@@ -13,6 +13,7 @@ mod domain;
 use axum::{
     extract::Form,
     extract::Json,
+    extract::State,
     http::{Method, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::get,
@@ -22,8 +23,16 @@ use axum::{
 use domain::messages::Level;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use tokio::sync::mpsc;
+use tokio::sync::mpsc::Receiver;
+use tokio::sync::mpsc::Sender;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+#[derive(Clone)]
+struct HandlerState {
+    tx: Sender<Level>,
+}
 
 #[tokio::main]
 async fn main() {
@@ -34,6 +43,17 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    // build our mpsc channel for processing messages
+    let (tx, rx) = mpsc::channel::<Level>(100);
+
+    // spawn a thread to listen
+
+    tokio::spawn(async move {
+        consume_channel(rx).await;
+    });
+
+    let state = HandlerState { tx: tx };
 
     let cors = CorsLayer::new()
         // allow `GET` and `POST` when accessing the resource
@@ -49,6 +69,7 @@ async fn main() {
         .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
         .route("/load", get(load_map))
         .route("/save", post(save_map))
+        .with_state(state)
         .layer(cors);
 
     // run it with hyper
@@ -82,9 +103,18 @@ async fn load_map() -> Json<domain::messages::GameState> {
     let gamestate = domain::messages::GameState::make("Some Description".to_string(), (250, 250));
     Json(gamestate)
 }
-async fn save_map(Json(level): Json<Level>) -> Response {
-    dbg!(level);
+async fn save_map(State(state): State<HandlerState>, Json(level): Json<Level>) -> Response {
+    tokio::spawn(async move {
+        let _ = state.tx.clone().send(level).await;
+    });
     StatusCode::OK.into_response()
+}
+
+async fn consume_channel(mut rx: Receiver<Level>) {
+    while let Some(level) = rx.recv().await {
+        println!("Recieved a save message!");
+        dbg!(level);
+    }
 }
 
 async fn show_form() -> Html<&'static str> {

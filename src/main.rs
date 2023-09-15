@@ -22,17 +22,17 @@ use axum::{
     Router,
 };
 use domain::Game::Level;
+use domain::Message;
 use serde::{Deserialize, Serialize};
 use state::Memory::MemoryHandler;
 use std::net::SocketAddr;
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::Receiver;
 use tokio::sync::mpsc::Sender;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 #[derive(Clone)]
 struct HandlerState {
-    tx: Sender<Level>,
+    tx: Sender<Message::Message>,
 }
 
 #[tokio::main]
@@ -46,12 +46,13 @@ async fn main() {
         .init();
 
     // build our mpsc channel for processing messages
-    let (tx, rx) = mpsc::channel::<Level>(100);
+    let (tx, rx) = mpsc::channel::<Message::Message>(100);
 
     // spawn a thread to listen
 
     tokio::spawn(async move {
-        consume_channel(rx).await;
+        let mut memory: MemoryHandler<Level> = MemoryHandler::make(rx);
+        memory.start().await;
     });
 
     let state = HandlerState { tx: tx };
@@ -106,16 +107,13 @@ async fn load_map() -> Json<domain::Game::GameState> {
 }
 async fn save_map(State(state): State<HandlerState>, Json(level): Json<Level>) -> Response {
     tokio::spawn(async move {
-        let _ = state.tx.clone().send(level).await;
+        let _ = state
+            .tx
+            .clone()
+            .send(Message::Message::EntireLevel { level: level })
+            .await;
     });
     StatusCode::OK.into_response()
-}
-
-async fn consume_channel(mut rx: Receiver<Level>) {
-    while let Some(level) = rx.recv().await {
-        println!("Recieved a save message!");
-        dbg!(level);
-    }
 }
 
 async fn show_form() -> Html<&'static str> {

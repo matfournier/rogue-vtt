@@ -3,6 +3,9 @@
 use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::fmt;
+use std::ops::Deref;
+use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -31,11 +34,11 @@ pub struct Tile {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Level {
-    description: String,
-    id: Id,
-    dimension: (i32, i32),
-    tiles: Vec<Tile>,
-    features: Vec<Tile>,
+    pub description: String,
+    pub id: Id,
+    pub dimension: (i32, i32),
+    pub tiles: Vec<Tile>,
+    pub features: Vec<Tile>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -55,7 +58,29 @@ pub struct Entity {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-struct Id(String);
+pub struct Id(String);
+
+impl FromStr for Id {
+    type Err = Box<dyn std::error::Error>;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Id(s.to_string()))
+    }
+}
+
+impl fmt::Display for Id {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl Deref for Id {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Entities {

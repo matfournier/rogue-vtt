@@ -25,7 +25,10 @@ use domain::Game::Level;
 use domain::Message;
 use serde::{Deserialize, Serialize};
 use state::Memory::MemoryHandler;
+use std::collections::HashMap;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::RwLock;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tower_http::cors::{Any, CorsLayer};
@@ -33,6 +36,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 #[derive(Clone)]
 struct HandlerState {
     tx: Sender<Message::Message>,
+    state: Arc<RwLock<HashMap<String, Level>>>,
 }
 
 #[tokio::main]
@@ -50,12 +54,16 @@ async fn main() {
 
     // spawn a thread to listen
 
+    let (mut memory, state) = MemoryHandler::make(rx);
+
     tokio::spawn(async move {
-        let mut memory: MemoryHandler<Level> = MemoryHandler::make(rx);
         memory.start().await;
     });
 
-    let state = HandlerState { tx: tx };
+    let state = HandlerState {
+        tx: tx,
+        state: Arc::clone(&state),
+    };
 
     let cors = CorsLayer::new()
         // allow `GET` and `POST` when accessing the resource

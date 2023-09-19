@@ -1,20 +1,25 @@
 use crate::domain::Game::Level;
 use crate::domain::Message::Message;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
 
 pub struct MemoryHandler<T> {
     rx: Receiver<Message>,
-    state: RwLock<HashMap<String, T>>,
+    state: Arc<RwLock<HashMap<String, T>>>,
 }
 
 impl<T> MemoryHandler<T> {
-    pub fn make(rx: Receiver<Message>) -> Self {
-        MemoryHandler {
-            rx: rx,
-            state: RwLock::new(HashMap::new()),
-        }
+    pub fn make(rx: Receiver<Message>) -> (Self, Arc<RwLock<HashMap<String, T>>>) {
+        let s = Arc::new(RwLock::new(HashMap::new()));
+        (
+            MemoryHandler {
+                rx: rx,
+                state: Arc::clone(&s),
+            },
+            s,
+        )
     }
 }
 

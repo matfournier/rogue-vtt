@@ -14,6 +14,7 @@ mod state;
 use axum::{
     extract::Form,
     extract::Json,
+    extract::Path,
     extract::State,
     http::{Method, StatusCode},
     response::{Html, IntoResponse, Response},
@@ -21,22 +22,27 @@ use axum::{
     routing::post,
     Router,
 };
-use domain::Game::Level;
+use domain::Game::{Id, Level};
 use domain::Message;
 use serde::{Deserialize, Serialize};
 use state::Memory::MemoryHandler;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::sync::RwLock;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 #[derive(Clone)]
 struct HandlerState {
     tx: Sender<Message::Message>,
     state: Arc<RwLock<HashMap<String, Level>>>,
+}
+
+#[derive(Deserialize)]
+struct MapId {
+    id: String,
 }
 
 #[tokio::main]
@@ -77,7 +83,8 @@ async fn main() {
         .route("/", get(show_form).post(accept_form))
         .route("/hello", get(show_hello))
         .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
-        .route("/load", get(load_map))
+        .route("/load", get(load_map)) // remove this eventually once you get login flow working
+        .route("/load/:map_id", get(load_specific_map))
         .route("/save", post(save_map))
         .with_state(state)
         .layer(cors);
@@ -112,6 +119,18 @@ async fn init_map() -> Json<domain::Game::InitMap> {
 async fn load_map() -> Json<domain::Game::GameState> {
     let gamestate = domain::Game::GameState::make("Some Description".to_string(), (250, 250));
     Json(gamestate)
+}
+
+async fn load_specific_map(
+    State(state): State<HandlerState>,
+    Path(map_id): Path<String>,
+) -> Response {
+    let maps = state.state.read().await;
+    if let Some(level) = maps.get(&map_id) {
+        Json(level).into_response()
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
 }
 async fn save_map(State(state): State<HandlerState>, Json(level): Json<Level>) -> Response {
     tokio::spawn(async move {

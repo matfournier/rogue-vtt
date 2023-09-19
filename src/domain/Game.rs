@@ -60,6 +60,12 @@ pub struct Entity {
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Id(String);
 
+impl Id {
+    pub fn new(val: String) -> Self {
+        Id(val)
+    }
+}
+
 impl FromStr for Id {
     type Err = Box<dyn std::error::Error>;
 

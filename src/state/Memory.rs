@@ -2,8 +2,8 @@ use crate::domain::Game::Level;
 use crate::domain::Message::Message;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::RwLock;
 use tokio::sync::mpsc::Receiver;
+use tokio::sync::RwLock;
 
 pub struct MemoryHandler<T> {
     rx: Receiver<Message>,
@@ -30,15 +30,15 @@ impl MemoryHandler<Level> {
             match message {
                 Message::EntireLevel { level: lvl } => {
                     let _ = dbg!(lvl.clone());
-                    self.add(&lvl.id.clone(), lvl);
+                    self.add(&lvl.id.clone(), lvl).await;
                 }
                 Message::TriggerSave => println!("triggered save"),
             };
         }
     }
 
-    fn add(&mut self, key: &str, element: Level) {
-        let mut w = self.state.write().unwrap();
+    async fn add(&mut self, key: &str, element: Level) {
+        let mut w = self.state.write().await;
         w.insert(key.to_string(), element);
     }
 }

@@ -8,7 +8,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize)]
 pub struct InitMap {
     kind: i32,
     xy: (i32, i32),
@@ -131,10 +131,15 @@ impl EntityVec {
     }
 }
 
+// Each level has an Id
+//  - use this to switch levels within a game
+// Each Game has an Id
+//  - use this to manage game
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GameState {
-    level: Level,
-    entities: Entities,
+    pub level: Level,
+    pub entities: Entities,
+    pub game_id: String,
 }
 
 impl GameState {
@@ -171,6 +176,7 @@ impl GameState {
         GameState {
             level: level,
             entities: entities,
+            game_id: Uuid::new_v4().to_string(),
         }
     }
 }

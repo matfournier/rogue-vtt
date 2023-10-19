@@ -31,6 +31,7 @@ export type Entities = {
 export type GameState = {
     level: Level,
     entities: Entities
+    gameId: String
 }
 
 export function parse(s: any): GameState {
@@ -57,7 +58,8 @@ export function parse(s: any): GameState {
 
     return {
         level: level,
-        entities: entities
+        entities: entities,
+        gameId: s["game_id"]
     }
 
 }

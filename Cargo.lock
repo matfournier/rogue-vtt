@@ -145,6 +145,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "5.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "978747c1d849a7d2ee5e8adc0159961c48fb7e5db2f06af6723b80123bb53856"
+dependencies = [
+ "cfg-if",
+ "hashbrown",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core",
+]
+
+[[package]]
 name = "data-encoding"
 version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -236,6 +249,12 @@ dependencies = [
  "libc",
  "wasi",
 ]
+
+[[package]]
+name = "hashbrown"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7dfda62a12f55daeae5015f81b0baea145391cb4520f86c248fc615d72640d12"
 
 [[package]]
 name = "hermit-abi"
@@ -593,6 +612,7 @@ name = "roguevtt-server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "dashmap",
  "serde",
  "serde_json",
  "tokio",

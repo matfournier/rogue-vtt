@@ -23,7 +23,7 @@
             Existing Map
         </label>
     </div>
-    {#if radio == "1"}
+    {#if radio == 1}
         <div>
             <label for="name">ID</label>
             <input type="text" id="ID" name="ID" value="" />

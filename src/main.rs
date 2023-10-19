@@ -15,6 +15,7 @@ use axum::{
     extract::Form,
     extract::Json,
     extract::Path,
+    extract::Query,
     extract::State,
     http::{Method, StatusCode},
     response::{Html, IntoResponse, Response},
@@ -22,10 +23,12 @@ use axum::{
     routing::post,
     Router,
 };
-use domain::Game::{Id, Level};
+use dashmap::DashMap;
+use domain::Game::{GameState, Id, Level};
 use domain::Message;
 use serde::{Deserialize, Serialize};
 use state::Memory::MemoryHandler;
+use state::Memory::MemoryReceiver;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -34,10 +37,11 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
 #[derive(Clone)]
 struct HandlerState {
     tx: Sender<Message::Message>,
-    state: Arc<RwLock<HashMap<String, Level>>>,
+    game_state: Arc<MemoryHandler<GameState>>,
 }
 
 #[derive(Deserialize)]
@@ -60,15 +64,19 @@ async fn main() {
 
     // spawn a thread to listen
 
-    let (mut memory, state) = MemoryHandler::make(rx);
+    let d: Arc<DashMap<String, GameState>> = Arc::new(DashMap::new());
+
+    let memory_handler = MemoryHandler::make(d.clone());
+
+    let mut memory_receiver = MemoryReceiver::make(rx, d.clone());
 
     tokio::spawn(async move {
-        memory.start().await;
+        memory_receiver.start().await;
     });
 
     let state = HandlerState {
         tx: tx,
-        state: Arc::clone(&state),
+        game_state: Arc::new(memory_handler),
     };
 
     let cors = CorsLayer::new()
@@ -80,12 +88,13 @@ async fn main() {
 
     // build our application with some routes
     let app = Router::new()
-        .route("/", get(show_form).post(accept_form))
-        .route("/hello", get(show_hello))
+        .route("/", get(show_hello))
         .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
         .route("/load", get(load_map)) // remove this eventually once you get login flow working
-        .route("/load/:map_id", get(load_specific_map))
-        .route("/save", post(save_map))
+        // .route("/load/:map_id", get(load_specific_map))
+        .route("/save", post(save_game))
+        .route("/create_game", post(create_game))
+        .route("/load_game/:game_id", get(load_game))
         .with_state(state)
         .layer(cors);
 
@@ -121,80 +130,43 @@ async fn load_map() -> Json<domain::Game::GameState> {
     Json(gamestate)
 }
 
-async fn load_specific_map(
-    State(state): State<HandlerState>,
-    Path(map_id): Path<String>,
-) -> Response {
-    let maps = state.state.read().await;
-    if let Some(level) = maps.get(&map_id) {
-        Json(level).into_response()
-    } else {
-        StatusCode::NOT_FOUND.into_response()
+async fn load_game(State(state): State<HandlerState>, Path(id): Path<String>) -> Response {
+    let zz = Arc::clone(&state.game_state);
+    let resp = zz.get_game_json(&id);
+
+    match resp {
+        Some(game) => game.into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
     }
 }
-async fn save_map(State(state): State<HandlerState>, Json(level): Json<Level>) -> Response {
+async fn create_game(
+    State(state): State<HandlerState>,
+    // Query(description): Query<String>,
+) -> Response {
+    // TODO: get x,y dimensions from optional query param otherwise 250, 250
+
+    // let tt = Arc::clone(&state.game_state);
+    let tt = state.game_state.clone();
+
+    // read this https://ricardomartins.cc/2016/06/25/interior-mutability-thread-safety
+    // watch this https://www.youtube.com/watch?v=s19G6n0UjsM&t=1472s
+
+    // go into a thread spawn?
+
+    let description = "some description";
+    let r = tt.create_game(&description, &(250, 250));
+    Json(r).into_response()
+
+    // StatusCode::OK.into_response()
+}
+
+async fn save_game(State(state): State<HandlerState>, Json(game): Json<GameState>) -> Response {
+    let s = state.clone();
     tokio::spawn(async move {
-        let _ = state
-            .tx
-            .clone()
-            .send(Message::Message::EntireLevel { level: level })
-            .await;
+        let _ =
+            s.tx.clone()
+                .send(Message::Message::EntireGame { game: game })
+                .await;
     });
     StatusCode::OK.into_response()
 }
-
-async fn show_form() -> Html<&'static str> {
-    Html(
-        r#"
-        <!doctype html>
-        <html>
-            <head></head>
-            <body>
-                <form action="/" method="post">
-                    <label for="name">
-                        Enter your name:
-                        <input type="text" name="name">
-                    </label>
-
-                    <label>
-                        Enter your email:
-                        <input type="text" name="email">
-                    </label>
-
-                    <input type="submit" value="Subscribe!">
-                </form>
-            </body>
-        </html>
-        "#,
-    )
-}
-
-#[derive(Deserialize, Debug)]
-#[allow(dead_code)]
-struct Input {
-    name: String,
-    email: String,
-}
-
-async fn accept_form(Form(input): Form<Input>) {
-    dbg!(&input);
-}
-
-//use axum::{
-//    extract,
-//    routing::post,
-//    Router,
-//};
-//use serde::Deserialize;
-
-//#[derive(Deserialize)]
-//struct CreateUser {
-//    email: String,
-//    password: String,
-//}
-//
-//async fn create_user(extract::Json(payload): extract::Json<CreateUser>) {
-//    // payload is a `CreateUser`
-//}
-
-//let app = Router::new().route("/users", post(create_user));

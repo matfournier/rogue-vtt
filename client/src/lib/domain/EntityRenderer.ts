@@ -1,5 +1,6 @@
 import type { Camera } from "../game/Camera";
 import { entityStore } from "../stores/UI";
+import type { Entities } from "../transfer/Transfer";
 
 export enum EntityType {
     PLAYER,
@@ -7,15 +8,16 @@ export enum EntityType {
 }
 
 export type Entity = {
-    c: string
-    type: EntityType
-    id: string // TODO this should come from the server/.
+    kind: EntityType
+    x: number,
+    y: number,
+    character: string,
+    id: string,
     description: string
 }
 
 export type RichEntity = {
     entity: Entity
-    xy: [number, number]
     colour: string
 }
 
@@ -47,7 +49,7 @@ class Stack {
     constructor(entity: Entity) {
         this.stack = new Array(entity);
         this.count = 1;
-        this.c = entity.c;
+        this.c = entity.character;
         this.stackType = this.stackTypeFromEntityType(entity)
     }
 
@@ -55,7 +57,7 @@ class Stack {
         this.stack.push(entity)
         this.count = this.stack.length
         if (this.count === 1) {
-            this.c = entity.c
+            this.c = entity.character
             this.stackType = this.stackTypeFromEntityType(entity)
         } else {
             this.c = this.count.toString();
@@ -82,14 +84,14 @@ class Stack {
     }
 
     private stackTypeFromEntityType(entity: Entity): StackType {
-        return (entity.type === EntityType.PLAYER ? StackType.PLAYER : StackType.NPC)
+        return (entity.kind === EntityType.PLAYER ? StackType.PLAYER : StackType.NPC)
     }
 
     private getStackType(stack: Array<Entity>): StackType {
         if (stack.length === 1) {
             return this.stackTypeFromEntityType(stack[0])
         } else {
-            let type: Set<EntityType> = new Set(stack.map(e => e.type))
+            let type: Set<EntityType> = new Set(stack.map(e => e.kind))
             let l = type.size
             if (l === 1 && type.has(EntityType.PLAYER)) {
                 return StackType.PLAYERS
@@ -126,13 +128,13 @@ export class EntityState {
         return this.state.map.get(this.state.key(x, y));
     }
 
-    addEntity(entity: Entity, x: number, y: number) {
-        this.state.put(entity, x, y)
+    addEntity(entity: Entity) {
+        this.state.put(entity)
         this.updateEntityStore();
     }
 
-    removeEntityAt(entity: Entity, x: number, y: number) {
-        this.state.remove(entity, x, y);
+    remove(entity: Entity) {
+        this.state.remove(entity);
         this.updateEntityStore();
         // todo: remove label if it no longer exists 
     }
@@ -150,31 +152,30 @@ export class EntityState {
     render(context: CanvasRenderingContext2D, x: number, y: number) {
         this.state.render(context, x, y)
     }
-    move(entity: Entity, x: number, y: number, xx: number, yy: number) {
-        this.state.move(entity, x, y, xx, yy);
+    move(entity: Entity, xx: number, yy: number) {
+        this.state.move(entity, xx, yy);
         this.updateEntityStore();
     }
 
     updateEntityStore(): void {
         let players: Array<RichEntity> = new Array();
         let npcs: Array<RichEntity> = new Array();
-        this.state.map.forEach((stack, coord) => {
-            let xy = this.idx(coord);
+        this.state.map.forEach((stack, _) => {
             stack.stack.forEach(entity => {
-                if (entity.type === EntityType.PLAYER) {
+                if (entity.kind === EntityType.PLAYER) {
                     let colour = this.colours.get("0");
-                    players.push({ entity: entity, xy: xy, colour: colour });
+                    players.push({ entity: entity, colour: colour });
                 } else {
                     let colour = this.colours.get("2");
-                    npcs.push({ entity: entity, xy: xy, colour: colour });
+                    npcs.push({ entity: entity, colour: colour });
                 }
             })
         }
         )
         players.sort((a, b) => {
-            if (a.xy == b.xy) {
+            if (a.entity.x == b.entity.x && a.entity.y == b.entity.y) {
                 return 0
-            } else if (a.xy[0] < b.xy[0]) {
+            } else if (a.entity.x < b.entity.x) {
                 return -1;
             } else {
                 return 1;
@@ -182,9 +183,9 @@ export class EntityState {
         })
 
         npcs.sort((a, b) => {
-            if (a.xy == b.xy) {
+            if (a.entity.x == b.entity.x && a.entity.y == b.entity.y) {
                 return 0
-            } else if (a.xy[0] < b.xy[0]) {
+            } else if (a.entity.x < b.entity.x) {
                 return -1;
             } else {
                 return 1;
@@ -192,6 +193,25 @@ export class EntityState {
         })
 
         entityStore.set({ players: players, npcs: npcs });
+    }
+
+    toEntities(): Entities {
+        let players: Array<Entity> = new Array();
+        let npcs: Array<Entity> = new Array();
+        this.state.map.forEach((stack, _) => {
+            stack.stack.forEach(entity => {
+                if (entity.kind === EntityType.PLAYER) {
+                    players.push(entity);
+                } else {
+                    npcs.push(entity);
+                }
+            })
+        }
+        )
+        return ({
+            players: players,
+            npcs: npcs
+        })
     }
 
     private idx(s: string): [number, number] {
@@ -211,8 +231,8 @@ export class EntityRenderer {
         this.camera = camera;
     }
 
-    put(e: Entity, x: number, y: number): void {
-        let key = this.key(x, y)
+    put(e: Entity): void {
+        let key = this.key(e.x, e.y)
         let stack = this.map.get(key)
         if (stack !== undefined) {
             this.map.set(key, stack.add(e))
@@ -223,9 +243,11 @@ export class EntityRenderer {
 
     }
 
-    move(e: Entity, x: number, y: number, xx: number, yy: number): void {
-        if (this.remove(e, x, y)) {
-            this.put(e, xx, yy);
+    move(e: Entity, xx: number, yy: number): void {
+        if (this.remove(e)) {
+            e.x = xx;
+            e.y = yy;
+            this.put(e);
         }
     }
 
@@ -233,8 +255,8 @@ export class EntityRenderer {
         return `${x}-${y}`
     }
 
-    remove(e: Entity, x: number, y: number): boolean {
-        let key = this.key(x, y)
+    remove(e: Entity): boolean {
+        let key = this.key(e.x, e.y)
         let stack = this.map.get(key)
         if (stack !== undefined) {
             let removed = stack.remove(e)

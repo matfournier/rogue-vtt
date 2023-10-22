@@ -28,7 +28,7 @@
 	import { Camera } from "./Camera";
 	import { LocalEventSystem } from "../domain/EventSystem";
 	import Sidebar from "../Sidebar.svelte";
-	import { parse } from "../transfer/Transfer";
+	import { parseGamestate } from "../transfer/Transfer";
 
 	const tileSize = 24;
 	const cameraDimensions = [56, 32];
@@ -40,6 +40,7 @@
 	export let background = "#fff";
 
 	export let render;
+	export let gameState;
 
 	let pattern;
 
@@ -82,63 +83,54 @@
 		return tiledBackgroundCanvas;
 	};
 
-	onMount(async () => {
-		fetch("http://localhost:3000/load")
-			.then((response) => response.json())
-			.then((result) => {
-				console.log(result);
+	onMount(() => {
+		let gs = gameState;
+		console.log(gs);
+		// let initAction = toInitAction(result);
+		let mapSize = gs.level.dimension;
 
-				let gs = parse(result);
-				console.log(gs);
-				// let initAction = toInitAction(result);
-				let mapSize = gs.level.dimension;
+		console.log(mapSize);
+		selectedMapTile = [0, 0];
+		camera = new Camera(
+			[selectedMapTile[0], selectedMapTile[1]],
+			cameraDimensions[0],
+			cameraDimensions[1],
+			mapSize[0],
+			mapSize[1]
+		);
+		viewHandlerFactory("RESET");
 
-				console.log(mapSize);
-				selectedMapTile = [0, 0];
-				camera = new Camera(
-					[selectedMapTile[0], selectedMapTile[1]],
-					cameraDimensions[0],
-					cameraDimensions[1],
-					mapSize[0],
-					mapSize[1]
-				);
-				viewHandlerFactory("RESET");
+		map = dungeonMapFrom(gs.level, tileSheet, camera);
 
-				map = dungeonMapFrom(gs.level, tileSheet, camera);
-
-				// let map = new MapState(
-				// 	mapSize[0],
-				// 	mapSize[1],
-				// 	tileSheet,
-				// 	camera,
-				// 	"someId",
-				// 	"someDescription"
-				// );
-				entities = new EntityState(camera);
-				es = new LocalEventSystem(map, entities, camera);
-				// TODO: this default canvas stuff should move somewhere else.
-				let defaultTile = tileSheet.dungeon.tiles[101];
-				context = canvas.getContext("2d");
-				pattern = context.createPattern(
-					defaultCanvas(defaultTile),
-					"repeat"
-				);
-				context.fillStyle = pattern;
-				context.font = "18pt Monospace";
-				handleSize();
-				stores = {
-					selected: selectedTileStore.subscribe((value) => {
-						paletteSelected = value;
-						if (interfaceHandler !== undefined) {
-							interfaceHandler.update(value);
-						}
-					}),
-					entityEvents: entityEventStore.subscribe((events) => {
-						handleEvent(events);
-					}),
-				};
-				draw();
-			});
+		// let map = new MapState(
+		// 	mapSize[0],
+		// 	mapSize[1],
+		// 	tileSheet,
+		// 	camera,
+		// 	"someId",
+		// 	"someDescription"
+		// );
+		entities = new EntityState(camera);
+		es = new LocalEventSystem(map, entities, camera);
+		// TODO: this default canvas stuff should move somewhere else.
+		let defaultTile = tileSheet.dungeon.tiles[101];
+		context = canvas.getContext("2d");
+		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
+		context.fillStyle = pattern;
+		context.font = "18pt Monospace";
+		handleSize();
+		stores = {
+			selected: selectedTileStore.subscribe((value) => {
+				paletteSelected = value;
+				if (interfaceHandler !== undefined) {
+					interfaceHandler.update(value);
+				}
+			}),
+			entityEvents: entityEventStore.subscribe((events) => {
+				handleEvent(events);
+			}),
+		};
+		draw();
 	});
 
 	const teardown = () => {

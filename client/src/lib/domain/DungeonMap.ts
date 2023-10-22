@@ -1,10 +1,11 @@
 import type { Camera } from "../game/Camera";
-import type { Level, Tile } from "../transfer/Transfer";
+import { type Level, type Tile, LevelKind } from "../transfer/Transfer";
 import type { Entity } from "./EntityRenderer";
 import { type Tilesheets } from "./Tilesheet";
 
 export class MapState {
     private id: String; // fix 
+    private levelKind: LevelKind;
     private description: String; // fix
     private camera: Camera;
     private height: number;
@@ -23,6 +24,7 @@ export class MapState {
         this.dungeon = Array(columns * rows)
         this.features = new Map<string, number>();
         this.camera = camera;
+        this.levelKind = LevelKind.Dungeon;
 
         this.gfx = tileSheets;
         this.tileSize = 24;
@@ -122,6 +124,7 @@ export class MapState {
             dungeonFeatures.push({ x: coords[0], y: coords[1], idx: idx })
         });
         return {
+            levelKind: this.levelKind,
             description: this.description,
             id: this.id,
             dimension: [this.width, this.height],

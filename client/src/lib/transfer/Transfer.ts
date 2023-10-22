@@ -1,12 +1,17 @@
+import type { Entity } from "../domain/EntityRenderer"
 
 export type Tile = {
     x: number,
     y: number,
     idx: number
 }
-
+export enum LevelKind {
+    Dungeon,
+    Overland
+}
 
 export type Level = {
+    levelKind: LevelKind,
     description: String,
     id: String,
     dimension: [number, number] // cols, rows 
@@ -14,18 +19,32 @@ export type Level = {
     features: Array<Tile>
 }
 
-export type Entity = {
-    kind: String,
-    x: number,
-    y: number,
-    character: String,
-    id: String,
-    description: String
+
+export function entityToJson(e: Entity): String {
+    return JSON.stringify(e)
 }
 
+// ServerSide this is a Map<EntityId, Entity>
 export type Entities = {
     players: Array<Entity>
     npcs: Array<Entity>
+}
+
+export type EntitiesMap = {
+    players: Map<String, Entity>
+    npcs: Map<String, Entity>
+}
+
+export function entitiesToJson(e: Entities): String {
+    let players: Map<String, Entity> = new Map<String, Entity>();
+    let npcs: Map<String, Entity> = new Map<String, Entity>();
+    e.players.forEach(e => players.set(e.id, e))
+    e.npcs.forEach(e => npcs.set(e.id, e))
+    let em: EntitiesMap = {
+        players: players,
+        npcs: npcs
+    }
+    return JSON.stringify(em)
 }
 
 export type GameState = {
@@ -34,7 +53,11 @@ export type GameState = {
     gameId: String
 }
 
-export function parse(s: any): GameState {
+export function gameStateToJson(gs: GameState): String {
+    return JSON.stringify(gs)
+}
+
+export function parseGamestate(s: any): GameState {
     // let entities: Entities = s["entities"];
     let e = s["entities"];
 

@@ -1,8 +1,9 @@
 import * as E from "fp-ts/Either";
 import { pipe } from "fp-ts/Function";
 import type { Either } from "fp-ts/Either";
-import { LoginStateType } from "../login/loginstate";
-import type { LoadMap, LoginState } from "../login/loginstate"
+import { LoginActionType } from "../login/loginstate";
+import type { LoadGame, LoginAction } from "../login/loginstate"
+import { LevelKind } from "../transfer/Transfer";
 
 // typing a form in typescript appears to be the ninth circle of hell, wtf
 
@@ -22,17 +23,17 @@ export function formToObject(e: any): Either<string, any> {
     }
 }
 
-export function parseLogin(form: any): LoginState {
+export function parseLogin(form: any): LoginAction {
     console.log(form);
     return pipe(
         formToObject(form),
         E.map(a => parseLoginForm(a)),
-        E.fold(e => { return <LoginState>{ kind: LoginStateType.Error, text: e } }, r => r)
+        E.fold(e => { return <LoginAction>{ kind: LoginActionType.Error, text: e } }, r => r)
     )
 
 }
 
-function parseLoginForm(e: any): LoginState {
+function parseLoginForm(e: any): LoginAction {
     const getKey = (v: string): Either<string, any> => {
         const result = e[v];
         if (result == null || result == undefined) {
@@ -43,16 +44,31 @@ function parseLoginForm(e: any): LoginState {
     }
 
 
-    const parseType = (v: string): Either<string, LoginStateType> => {
+    const parseType = (v: string): Either<string, LoginActionType> => {
         if (v == "0") {
-            return E.right(LoginStateType.Login)
+            return E.right(LoginActionType.Create)
         } else if (v == "1") {
-            return E.right(LoginStateType.Load)
+            return E.right(LoginActionType.Load)
         } else {
             return E.left("Could not parse form")
         }
     }
 
+    const validNumber = (v: number): Either<string, number> => {
+        if (v >= 0 && v <= 1000) {
+            return E.right(v)
+        } else {
+            return E.left(`${v} is not between 0 and 1000`)
+        }
+    }
+
+    const parseXY = (): Either<string, [number, number]> => {
+        return pipe(
+            pipe(getKey("X"), E.chain(n => validNumber(n as number)),
+                E.chain(x => pipe(getKey("Y"), E.chain(n => validNumber(n as number)), E.map(y => [x, y])))
+            )
+        )
+    }
 
     const nonEmpty = (b: string): Either<string, string> => {
         if (b == null || b == undefined || b == "") {
@@ -62,16 +78,19 @@ function parseLoginForm(e: any): LoginState {
         }
     }
 
-    const parseMapId = (): Either<string, LoadMap> =>
+    const parseMapId = (): Either<string, LoadGame> =>
         pipe(
             getKey("ID"),
             E.chain(nonEmpty),
-            E.map(<LoadMap>(id: string) => { return { kind: LoginStateType.Load, id: id } })
+            E.map(<LoadGame>(id: string) => { return { kind: LoginActionType.Load, id: id } })
         )
 
-    const parseLoginType = (t: LoginStateType): Either<string, LoginState> => {
-        if (t == LoginStateType.Login) {
-            return E.right({ kind: LoginStateType.Login })
+    const parseLoginType = (t: LoginActionType): Either<string, LoginAction> => {
+        if (t == LoginActionType.Create) {
+            return pipe(
+                parseXY(),
+                E.map(xy => { return { kind: LoginActionType.Create, xy: xy, description: "default", user: "default", levelKind: LevelKind.Dungeon } })
+            )
         } else {
             return parseMapId()
         }
@@ -82,6 +101,6 @@ function parseLoginForm(e: any): LoginState {
         getKey("newmap"),
         E.chain(parseType),
         E.chain(parseLoginType),
-        E.fold(e => { return { kind: LoginStateType.Error, text: e } }, r => r)
+        E.fold(e => { return { kind: LoginActionType.Error, text: e } }, r => r)
     )
 }

@@ -3,30 +3,38 @@
 	import Login from "./lib/login/Login.svelte";
 	import { tilesheets } from "./lib/domain/Tilesheet";
 	import { loginStateStore } from "./lib/stores/UI";
-	let promise = tilesheets();
+	import { LoginResultType } from "./lib/login/loginstate";
+	let promise = tilesheets(); // TODO  move this to GameState
 
 	// login: create or join map
 	// game: the game with the the associated ID attached
 	let screen = "login";
+	let gameState;
+	let errorText;
 
-	let state; // 0: login, 1: game load, 2: error
+	let state = 0; // 0: NoResult, 1: game load, 2: error
 	loginStateStore.subscribe((s) => {
-		state = s;
+		if (s.kind == LoginResultType.Load) {
+			state = s.kind;
+			gameState = s.game;
+		} else if (s.kind === LoginResultType.Error) {
+			state = s.kind;
+			errorText = s.error;
+		}
 	});
 
-	let render = true;
+	let render = true; // what is this for?
 </script>
 
 <main>
-	{#if state.kind == "1"}
+	{#if state == 1}
 		{#await promise then tileSheet}
-			<Game {tileSheet} {render} />
+			<Game {tileSheet} {gameState} {render} />
 		{/await}
 	{:else}
 		<Login />
-		{#if state.kind == "2"}
-			<p>{state.text}</p>
-			<p>error code: {state.code}</p>
+		{#if state == 2}
+			<p>ERROR: {errorText}</p>
 		{/if}
 	{/if}
 </main>

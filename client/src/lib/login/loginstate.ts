@@ -1,23 +1,50 @@
+import type { GameState, LevelKind } from "../transfer/Transfer"
 
-export enum LoginStateType {
-    Login,
+export enum LoginActionType {
+    Create,
     Load,
     Error,
 }
 
-export type Login = {
-    kind: LoginStateType.Login
+export type Create = {
+    kind: LoginActionType.Create
+    levelKind: LevelKind,
+    xy: [number, number],
+    description: string,
+    user: string
 }
 
 
-export type LoadMap = {
-    kind: LoginStateType.Load
+export type LoadGame = {
+    kind: LoginActionType.Load,
     id: string
 }
 
-export type Error = {
-    kind: LoginStateType.Error
+export type LoginError = {
+    kind: LoginActionType.Error,
     text: string
 }
 
-export type LoginState = Login | LoadMap | Error
+export type LoginAction = Create | LoadGame | LoginError
+
+export enum LoginResultType {
+    NoResult,
+    Load,
+    Error
+}
+
+export type LoadGameResult = {
+    kind: LoginResultType.Load,
+    game: GameState
+}
+
+export type ErrorResult = {
+    kind: LoginResultType.Error
+    error: string
+}
+
+export type NoResult = {
+    kind: LoginResultType.NoResult
+
+}
+export type LoginResult = NoResult | LoadGameResult | ErrorResult 

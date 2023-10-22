@@ -20,11 +20,13 @@
             data[key] = value;
         }
 
-        // todo: move entity ID to a call to the server?
+        // TODO UUID javascript library
         if (data.character.length === 1 && data.description !== "") {
             let entity = {
-                c: data.character,
-                type: entityType(data.token),
+                character: data.character,
+                kind: entityType(data.token),
+                x: xy[0],
+                y: xy[1],
                 id: Math.floor(Date.now() + Math.random() * 2000000).toString(), // move serverside
                 description: data.description,
             };
@@ -32,7 +34,6 @@
             let entityAction = {
                 kind: ActionType.AddToken,
                 entity: entity,
-                xy: xy,
             };
 
             let gameEvents = [];

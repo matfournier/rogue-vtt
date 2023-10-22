@@ -61,14 +61,14 @@ export class LocalEventSystem implements EventSystem {
             //     this.entities.updateLabel(a.token, a.desc); // todo: doesn't tkae into account side
             //     break;
             case ActionType.AddToken:
-                this.entities.addEntity(a.entity, a.xy[0], a.xy[1]);
+                this.entities.addEntity(a.entity);
                 break;
             case ActionType.RemoveToken:
-                this.entities.removeEntityAt(a.entity, a.xy[0], a.xy[1]);
+                this.entities.remove(a.entity);
                 break;
             case ActionType.MoveToken:
                 console.log(a)
-                this.entities.move(a.entity, a.from[0], a.from[1], a.to[0], a.to[1]);
+                this.entities.move(a.entity, a.to[0], a.to[1]);
                 break;
         }
     }

@@ -77,7 +77,6 @@ export type ClearAction = {
 export type AddTokenAction = {
     kind: ActionType.AddToken
     entity: Entity,
-    xy: [number, number]
 }
 
 

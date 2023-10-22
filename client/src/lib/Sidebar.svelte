@@ -9,9 +9,9 @@
     {#each $entityStore.players as player (player.entity.id)}
         <SidebarGlyph
             entity={player.entity}
-            glpyh={player.entity.c}
+            glpyh={player.entity.character}
             description={player.entity.description}
-            xy={player.xy}
+            xy={[player.entity.x, player.entity.y]}
             colour={player.colour}
         />
     {/each}
@@ -20,9 +20,9 @@
     {#each $entityStore.npcs as npc (npc.entity.id)}
         <SidebarGlyph
             entity={npc.entity}
-            glpyh={npc.entity.c}
+            glpyh={npc.entity.character}
             description={npc.entity.description}
-            xy={npc.xy}
+            xy={[npc.entity.x, npc.entity.y]}
             colour={npc.colour}
         />
     {/each}

@@ -9,7 +9,7 @@
     export let callback;
     let characterValue = "";
     let tokens = 1;
-    export let entities;
+    // export let entities;
 
     function onSubmit(e) {
         const formData = new FormData(e.target);

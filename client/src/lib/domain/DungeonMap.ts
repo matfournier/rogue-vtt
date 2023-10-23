@@ -124,7 +124,7 @@ export class MapState {
             dungeonFeatures.push({ x: coords[0], y: coords[1], idx: idx })
         });
         return {
-            levelKind: this.levelKind,
+            kind: this.levelKind,
             description: this.description,
             id: this.id,
             dimension: [this.width, this.height],

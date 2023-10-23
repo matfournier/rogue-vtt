@@ -11,7 +11,7 @@ export enum LevelKind {
 }
 
 export type Level = {
-    levelKind: LevelKind,
+    kind: LevelKind,
     description: String,
     id: String,
     dimension: [number, number] // cols, rows 
@@ -35,7 +35,7 @@ export type EntitiesMap = {
     npcs: Map<String, Entity>
 }
 
-export function entitiesToJson(e: Entities): String {
+export function entitiesToJson(e: Entities): EntitiesMap {
     let players: Map<String, Entity> = new Map<String, Entity>();
     let npcs: Map<String, Entity> = new Map<String, Entity>();
     e.players.forEach(e => players.set(e.id, e))
@@ -44,13 +44,13 @@ export function entitiesToJson(e: Entities): String {
         players: players,
         npcs: npcs
     }
-    return JSON.stringify(em)
+    return em
 }
 
 export type GameState = {
     level: Level,
     entities: Entities
-    gameId: String
+    id: String
 }
 
 export function gameStateToJson(gs: GameState): String {
@@ -82,7 +82,7 @@ export function parseGamestate(s: any): GameState {
     return {
         level: level,
         entities: entities,
-        gameId: s["game_id"]
+        id: s["id"]
     }
 
 }

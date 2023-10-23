@@ -28,7 +28,7 @@
 	import { Camera } from "./Camera";
 	import { LocalEventSystem } from "../domain/EventSystem";
 	import Sidebar from "../Sidebar.svelte";
-	import { parseGamestate } from "../transfer/Transfer";
+	import { entitiesToJson, parseGamestate } from "../transfer/Transfer";
 
 	const tileSize = 24;
 	const cameraDimensions = [56, 32];
@@ -46,6 +46,7 @@
 
 	let paletteSelected;
 	let interfaceHandler;
+	let gameId;
 
 	let stores;
 	let map; // temporary, remove this later when you do saving properly.
@@ -111,6 +112,10 @@
 		// 	"someDescription"
 		// );
 		entities = new EntityState(camera);
+		console.log(gs.entities);
+		gs.entities.npcs.forEach((e) => entities.addEntity(e));
+		gs.entities.players.forEach((e) => entities.addEntity(e));
+		gameId = gs.id;
 		es = new LocalEventSystem(map, entities, camera);
 		// TODO: this default canvas stuff should move somewhere else.
 		let defaultTile = tileSheet.dungeon.tiles[101];
@@ -297,9 +302,17 @@
 	async function tempDoPost() {
 		console.log("clicked");
 		let level = map.toLevel();
+		let entitiesJson = entitiesToJson(entities.toEntities());
+		let gs = {
+			level: level,
+			entities: entitiesJson,
+			id: gameId,
+		};
+		let gsJson = JSON.stringify(gs);
+		console.log(gsJson);
 		const res = await fetch("http://localhost:3000/save", {
 			method: "POST",
-			body: JSON.stringify(level),
+			body: JSON.stringify(gs),
 			mode: "cors", // no-cors, *cors, same-origin
 			headers: {
 				"Content-Type": "application/json",
@@ -308,6 +321,7 @@
 		});
 		const status = await res.status;
 		console.log(status);
+		console.log("here");
 	}
 </script>
 

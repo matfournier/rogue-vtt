@@ -75,7 +75,7 @@ impl MemoryReceiver {
                 Message::EntireGame { game } => {
                     let _ = dbg!(game.clone());
                     let s = self.state.clone();
-                    s.insert(game.game_id.clone(), game)
+                    s.insert(game.id.clone(), game)
 
                     // self.add(&lvl.id.clone(), lvl);
                 }
@@ -116,16 +116,17 @@ where
 }
 
 impl MemoryHandler<GameState> {
-    pub fn create_game(&self, description: &str, xy: &(i32, i32)) -> String {
+    pub fn create_game(&self, description: &str, xy: &(i32, i32)) -> GameState {
         let gamestate = domain::Game::GameState::make(description.to_string(), *xy);
         // TODO: write to durable store here
         // .     also check if it already exists
-        let game_id = &gamestate.game_id.clone();
-        self.add(&gamestate.game_id.clone(), gamestate);
+        let game_id = &gamestate.id.clone();
+        self.add(&gamestate.id.clone(), gamestate.clone());
         dbg!(game_id.clone());
-        game_id.to_string()
+        gamestate
     }
     pub fn get_game_json(&self, id: &str) -> Option<Json<GameState>> {
+        println!("here!");
         self.get_json(id)
     }
     // TODO: loading a level within an existing game

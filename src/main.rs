@@ -1,15 +1,5 @@
-//! Run with
-//!
-//! ```not_rust
-//! cargo run -p example-form
-//! ```
-
 mod domain;
 mod state;
-
-// mod prelude {
-//     pub use crate::domain::Player;
-// }
 
 use axum::{
     extract::Form,
@@ -47,6 +37,25 @@ struct HandlerState {
 #[derive(Deserialize)]
 struct MapId {
     id: String,
+}
+
+#[derive(Deserialize)]
+struct CreateGameParam {
+    description: String,
+    user: String,
+    mode: String, // dungeon, world
+    x: i32,
+    y: i32,
+}
+
+impl CreateGameParam {
+    fn validate(self) -> Result<CreateGameParam, String> {
+        if self.x >= 0 && self.x <= 1000 && self.y >= 0 && self.y <= 1000 {
+            Ok(self)
+        } else {
+            Err("Out of bounds".to_string())
+        }
+    }
 }
 
 #[tokio::main]
@@ -89,8 +98,8 @@ async fn main() {
     // build our application with some routes
     let app = Router::new()
         .route("/", get(show_hello))
-        .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
-        .route("/load", get(load_map)) // remove this eventually once you get login flow working
+        // .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
+        // .route("/load", get(load_map)) // remove this eventually once you get login flow working
         // .route("/load/:map_id", get(load_specific_map))
         .route("/save", post(save_game))
         .route("/create_game", post(create_game))
@@ -120,10 +129,10 @@ async fn show_hello() -> Response {
     Json(hello).into_response()
 }
 
-async fn init_map() -> Json<domain::Game::InitMap> {
-    let map = domain::Game::InitMap::default("SomeIdHere".to_string());
-    Json(map)
-}
+// async fn init_map() -> Json<domain::Game::InitMap> {
+//     let map = domain::Game::InitMap::default("SomeIdHere".to_string());
+//     Json(map)
+// }
 
 async fn load_map() -> Json<domain::Game::GameState> {
     let gamestate = domain::Game::GameState::make("Some Description".to_string(), (250, 250));
@@ -141,27 +150,28 @@ async fn load_game(State(state): State<HandlerState>, Path(id): Path<String>) ->
 }
 async fn create_game(
     State(state): State<HandlerState>,
-    // Query(description): Query<String>,
+    Query(params): Query<CreateGameParam>,
 ) -> Response {
-    // TODO: get x,y dimensions from optional query param otherwise 250, 250
-
-    // let tt = Arc::clone(&state.game_state);
     let tt = state.game_state.clone();
-
-    // read this https://ricardomartins.cc/2016/06/25/interior-mutability-thread-safety
-    // watch this https://www.youtube.com/watch?v=s19G6n0UjsM&t=1472s
-
-    // go into a thread spawn?
-
-    let description = "some description";
-    let r = tt.create_game(&description, &(250, 250));
-    Json(r).into_response()
-
-    // StatusCode::OK.into_response()
+    match params.validate() {
+        Ok(params) => {
+            let r = tokio::task::spawn(async move {
+                tt.create_game(&params.description, &(params.x, params.y))
+            })
+            .await;
+            match r {
+                Ok(r) => Json(r).into_response(),
+                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            }
+        }
+        Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
+    }
 }
 
 async fn save_game(State(state): State<HandlerState>, Json(game): Json<GameState>) -> Response {
     let s = state.clone();
+    // TODO -> change this to be a direct save
+    // probably still in it's own thread
     tokio::spawn(async move {
         let _ =
             s.tx.clone()

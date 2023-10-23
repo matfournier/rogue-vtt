@@ -2,28 +2,29 @@
 
 use serde::Deserialize;
 use serde::Serialize;
+use serde_repr::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::ops::Deref;
 use std::str::FromStr;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize)]
-pub struct InitMap {
-    kind: i32,
-    xy: (i32, i32),
-    id: String,
-}
+// #[derive(Clone, Debug, Default, PartialEq, Serialize)]
+// pub struct InitMap {
+//     kind: i32,
+//     xy: (i32, i32),
+//     description: String,
+// }
 
-impl InitMap {
-    pub fn default(id: String) -> InitMap {
-        InitMap {
-            kind: 9, // seems wrong?
-            xy: (100, 150),
-            id: id,
-        }
-    }
-}
+// impl InitMap {
+//     pub fn default(id: String, description: String) -> InitMap {
+//         InitMap {
+//             kind: 9, // seems wrong?
+//             xy: (100, 150),
+//             description: String,
+//         }
+//     }
+// }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
@@ -32,8 +33,16 @@ pub struct Tile {
     idx: i32,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize_repr, Deserialize_repr)]
+#[repr(u8)]
+pub enum LevelType {
+    Dungeon = 0,
+    Overland = 1,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Level {
+    pub kind: LevelType,
     pub description: String,
     pub id: Id,
     pub dimension: (i32, i32),
@@ -41,10 +50,11 @@ pub struct Level {
     pub features: Vec<Tile>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize_repr, Deserialize_repr)]
+#[repr(u8)]
 pub enum EntityType {
-    Player,
-    NPC,
+    Player = 0, // this is turning weird on the json, I'm geting string "player" rather than 0
+    NPC = 1,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -139,7 +149,7 @@ impl EntityVec {
 pub struct GameState {
     pub level: Level,
     pub entities: Entities,
-    pub game_id: String,
+    pub id: String,
 }
 
 impl GameState {
@@ -161,10 +171,10 @@ impl GameState {
             players: players,
             npcs: npcs,
         };
-        let id = Id(Uuid::new_v4().to_string());
         let level = Level {
+            kind: LevelType::Dungeon,
             description: description,
-            id: id,
+            id: Id(Uuid::new_v4().to_string()),
             dimension: dimension,
             tiles: vec![Tile {
                 x: 25,
@@ -176,7 +186,7 @@ impl GameState {
         GameState {
             level: level,
             entities: entities,
-            game_id: Uuid::new_v4().to_string(),
+            id: Uuid::new_v4().to_string(),
         }
     }
 }

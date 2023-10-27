@@ -104,12 +104,7 @@ class Stack {
     }
 }
 
-// export type FullySpecifiedEntitiy {
-//     entity: Entity
-//     position: [number, number]
-//     label: string
-// }
-
+// TODO: Add hex rendering for overland maps https://eperezcosano.github.io/hex-grid/
 export class EntityState {
     private state: EntityRenderer
     colours: Map<string, string>

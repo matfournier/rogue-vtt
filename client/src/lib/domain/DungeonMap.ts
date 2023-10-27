@@ -4,7 +4,7 @@ import type { Entity } from "./EntityRenderer";
 import { type Tilesheets } from "./Tilesheet";
 
 export class MapState {
-    private id: String; // fix 
+    id: String; // fix 
     private levelKind: LevelKind;
     private description: String; // fix
     private camera: Camera;

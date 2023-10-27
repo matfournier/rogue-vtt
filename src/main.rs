@@ -14,11 +14,11 @@ use axum::{
     Router,
 };
 use dashmap::DashMap;
-use domain::Game::{GameState, Id, Level};
-use domain::Message;
+
+use domain::{game::GameState, message};
 use serde::{Deserialize, Serialize};
-use state::Memory::MemoryHandler;
-use state::Memory::MemoryReceiver;
+use state::memory::MemoryHandler;
+use state::memory::MemoryReceiver;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -30,7 +30,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
 struct HandlerState {
-    tx: Sender<Message::Message>,
+    tx: Sender<message::Message>,
     game_state: Arc<MemoryHandler<GameState>>,
 }
 
@@ -46,6 +46,12 @@ struct CreateGameParam {
     mode: String, // dungeon, world
     x: i32,
     y: i32,
+}
+
+#[derive(Deserialize)]
+struct GameLevelIdParam {
+    game_id: String,
+    level_id: String,
 }
 
 impl CreateGameParam {
@@ -69,7 +75,7 @@ async fn main() {
         .init();
 
     // build our mpsc channel for processing messages
-    let (tx, rx) = mpsc::channel::<Message::Message>(100);
+    let (tx, rx) = mpsc::channel::<message::Message>(100);
 
     // spawn a thread to listen
 
@@ -104,6 +110,7 @@ async fn main() {
         .route("/save", post(save_game))
         .route("/create_game", post(create_game))
         .route("/load_game/:game_id", get(load_game))
+        .route("/save_game_level", post(save_game_level))
         .with_state(state)
         .layer(cors);
 
@@ -134,14 +141,16 @@ async fn show_hello() -> Response {
 //     Json(map)
 // }
 
-async fn load_map() -> Json<domain::Game::GameState> {
-    let gamestate = domain::Game::GameState::make("Some Description".to_string(), (250, 250));
+async fn load_map() -> Json<domain::game::GameState> {
+    let gamestate = domain::game::GameState::make("Some Description".to_string(), (250, 250));
     Json(gamestate)
 }
 
 async fn load_game(State(state): State<HandlerState>, Path(id): Path<String>) -> Response {
     let zz = Arc::clone(&state.game_state);
-    let resp = zz.get_game_json(&id);
+
+    // todo: needs the specific level to load as well
+    let resp = zz.get_game_json(&id, "dummy_value_fix_me").await;
 
     match resp {
         Some(game) => game.into_response(),
@@ -170,13 +179,36 @@ async fn create_game(
 
 async fn save_game(State(state): State<HandlerState>, Json(game): Json<GameState>) -> Response {
     let s = state.clone();
+    let game_id = game.id.clone();
     // TODO -> change this to be a direct save
     // probably still in it's own thread
     tokio::spawn(async move {
+        s.tx.clone()
+            .send(message::Message::EntireGame { game: game })
+            .await
+            .unwrap()
+    })
+    .await
+    .unwrap();
+
+    StatusCode::OK.into_response()
+}
+
+async fn save_game_level(
+    State(state): State<HandlerState>,
+    Json(game_lvl): Json<GameLevelIdParam>,
+) -> Response {
+    let s = state.clone();
+    tokio::spawn(async move {
         let _ =
             s.tx.clone()
-                .send(Message::Message::EntireGame { game: game })
+                .send(message::Message::TriggerSave {
+                    game_id: game_lvl.game_id,
+                    level_id: game_lvl.level_id,
+                })
                 .await;
-    });
+    })
+    .await;
+
     StatusCode::OK.into_response()
 }

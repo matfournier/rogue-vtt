@@ -1,2 +1,2 @@
-pub mod Game;
-pub mod Message;
+pub mod game;
+pub mod message;

@@ -302,6 +302,11 @@
 	async function tempDoPost() {
 		console.log("clicked");
 		let level = map.toLevel();
+		// this isn't working properly
+
+		console.log("entities");
+		console.log(entities);
+		console.log(entities.toEntities());
 		let entitiesJson = entitiesToJson(entities.toEntities());
 		let gs = {
 			level: level,
@@ -313,6 +318,25 @@
 		const res = await fetch("http://localhost:3000/save", {
 			method: "POST",
 			body: JSON.stringify(gs),
+			mode: "cors", // no-cors, *cors, same-origin
+			headers: {
+				"Content-Type": "application/json",
+			},
+			credentials: "same-origin", // include, *same-origin, omit
+		});
+		const status = await res.status;
+		console.log(status);
+		console.log("here");
+	}
+
+	async function tempDoSaveAll() {
+		console.log("saving everything");
+		let gsId = gameId;
+		let levelId = map.id;
+		let both = { game_id: gsId, level_id: levelId };
+		const res = await fetch("http://localhost:3000/save_game_level", {
+			method: "POST",
+			body: JSON.stringify(both),
 			mode: "cors", // no-cors, *cors, same-origin
 			headers: {
 				"Content-Type": "application/json",
@@ -376,6 +400,7 @@
 
 	<p>{serverCall}</p>
 	<button type="button" on:click={tempDoPost}>Temp Save</button>
+	<button type="button" on:click={tempDoSaveAll}>Temp Save to Disk</button>
 {/if}
 
 <style>

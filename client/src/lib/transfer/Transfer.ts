@@ -38,14 +38,12 @@ export type EntitiesMap = {
 export function entitiesToJson(e: Entities): EntitiesMap {
     let players: any = {};
     let npcs: any = {};
-    console.log(e, e.players);
     e.players.forEach(e => players[e.id] = e)
     e.npcs.forEach(e => npcs[e.id] = e)
     let em: EntitiesMap = {
         players: players,
         npcs: npcs
     }
-    console.log(em);
     return em
 }
 

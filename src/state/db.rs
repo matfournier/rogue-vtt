@@ -3,16 +3,16 @@ use std::path::Path;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::domain::game::GameState;
+use crate::domain::game::{DTOState, GameState};
+use crate::VecState;
 
-pub async fn save(gs: &GameState) {
+pub async fn save(gs: &VecState) {
     let root = "./localdb";
     let game = gs.id.clone();
     let level = gs.level.id.clone();
     // let path = format!("{root}/{game}_{level}.json");
     let path = format!("{root}/{game}.json");
 
-    let conents = serde_json::to_string(gs).unwrap();
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -20,10 +20,10 @@ pub async fn save(gs: &GameState) {
         .open(path)
         .await
         .unwrap();
-    file.write_all(conents.as_bytes()).await;
+    file.write_all(gs.toJson().as_bytes()).await;
 }
 
-pub async fn load(game_id: &str, level_id: &str) -> Option<GameState> {
+pub async fn load(game_id: &str, level_id: &str) -> Option<VecState> {
     let root = "./localdb";
     // let path = format!("{root}/{game_id}_{level_id}.json");
     // until we get the level stuff sorted out
@@ -38,7 +38,8 @@ pub async fn load(game_id: &str, level_id: &str) -> Option<GameState> {
             Ok(v) => v,
             Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
         };
-        Some(serde_json::from_str(&s).unwrap())
+        let v: Option<DTOState> = serde_json::from_str(&s).ok();
+        v.map(|gs| gs.toRust())
     } else {
         None
     }

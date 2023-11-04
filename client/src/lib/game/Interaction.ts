@@ -135,6 +135,9 @@ export function toInitAction(from: any): InitAction {
     return from as InitAction
 }
 
+
+// TODO change default tile action 
+
 export type Action = TilePlacedAction | TileRemovedAction | FillAction |
     ClearAction | AddTokenAction | RemoveTokenAction | MoveTokenAction | InitAction
 

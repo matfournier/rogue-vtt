@@ -112,7 +112,6 @@
 		// 	"someDescription"
 		// );
 		entities = new EntityState(camera);
-		console.log(gs.entities);
 		gs.entities.npcs.forEach((e) => entities.addEntity(e));
 		gs.entities.players.forEach((e) => entities.addEntity(e));
 		gameId = gs.id;
@@ -300,21 +299,15 @@
 
 	// tmep while figuring out saving
 	async function tempDoPost() {
-		console.log("clicked");
 		let level = map.toLevel();
 		// this isn't working properly
 
-		console.log("entities");
-		console.log(entities);
-		console.log(entities.toEntities());
 		let entitiesJson = entitiesToJson(entities.toEntities());
 		let gs = {
 			level: level,
 			entities: entitiesJson,
 			id: gameId,
 		};
-		let gsJson = JSON.stringify(gs);
-		console.log(gsJson);
 		const res = await fetch("http://localhost:3000/save", {
 			method: "POST",
 			body: JSON.stringify(gs),
@@ -325,8 +318,6 @@
 			credentials: "same-origin", // include, *same-origin, omit
 		});
 		const status = await res.status;
-		console.log(status);
-		console.log("here");
 	}
 
 	async function tempDoSaveAll() {

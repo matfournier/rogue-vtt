@@ -60,7 +60,6 @@ export class MapState {
     }
 
     mapIdx(x: number, y: number): number {
-        let res = (y * this.width + x)
         return (y * this.width + x)
     }
 

@@ -2,19 +2,28 @@ use super::game::GameState;
 
 use crate::domain::game::Entity;
 use crate::VecState;
+use serde::{Deserialize, Serialize};
 
 // Todo implement into_iter() for this type
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Bounds {
     x_1: u16,
     x_2: u16,
     y_1: u16,
     y_2: u16,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Message {
+    pub data: Event,
+    pub game_id: String,
+    pub user: Option<String>,
+    pub level: Option<String>,
+}
 // idea that everything would get sent through the pipe to the handler
 // can we send TriggerSave there too? Or should that be inside of the hanlder itself (probably?)
-#[derive(Debug)]
-pub enum Message {
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Event {
     EntireGame {
         game: VecState,
     },
@@ -44,6 +53,17 @@ pub enum Message {
     },
     AddToken {
         entity: Entity,
+    },
+    RemoveToken {
+        entity: Entity,
+    },
+    MoveToken {
+        entity: Entity,
+        to: (u32, u32),
+    },
+    TextMessage {
+        user: String,
+        msg: String,
     },
 }
 

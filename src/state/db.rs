@@ -3,16 +3,14 @@ use std::path::Path;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use crate::domain::game::{DTOState, GameState};
+use crate::domain::game::DTOState;
 use crate::VecState;
 
 pub async fn save(gs: &VecState) {
-    let root = "./localdb";
     let game = gs.id.clone();
-    let level = gs.level.id.clone();
-    // let path = format!("{root}/{game}_{level}.json");
-    let path = format!("{root}/{game}.json");
+    let path = game_to_path(&game);
 
+    // todo deal with this better.
     let mut file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -23,11 +21,17 @@ pub async fn save(gs: &VecState) {
     file.write_all(gs.toJson().as_bytes()).await;
 }
 
-pub async fn load(game_id: &str, level_id: &str) -> Option<VecState> {
+pub fn game_level_to_path(game_id: &str, level_id: &str) -> String {
     let root = "./localdb";
-    // let path = format!("{root}/{game_id}_{level_id}.json");
-    // until we get the level stuff sorted out
-    let path = format!("{root}/{game_id}.json");
+    format!("{root}/{game_id}_{level_id}.json")
+}
+
+pub fn game_to_path(game_id: &str) -> String {
+    let root = "./localdb";
+    format!("{root}/{game_id}.json")
+}
+
+pub async fn load_json(path: &str) -> Option<DTOState> {
     let is_present = Path::new(&path.clone()).exists();
     if is_present {
         let mut file = OpenOptions::new().read(true).open(path).await.unwrap();
@@ -39,8 +43,13 @@ pub async fn load(game_id: &str, level_id: &str) -> Option<VecState> {
             Err(e) => panic!("Invalid UTF-8 sequence: {}", e),
         };
         let v: Option<DTOState> = serde_json::from_str(&s).ok();
-        v.map(|gs| gs.toRust())
+        v
     } else {
         None
     }
+}
+
+pub async fn load_rust(path: &str) -> Option<VecState> {
+    let maybe_state = load_json(path).await;
+    maybe_state.map(|gs| gs.toRust())
 }

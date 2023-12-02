@@ -10,6 +10,7 @@
 	import EntityForm from "../popups/EntityForm.svelte";
 	import Palette from "../popups/Palette.svelte";
 	import { bind } from "../Modal.svelte";
+	import websocketStore from "svelte-websocket-store";
 
 	import Modal from "../Modal.svelte";
 	import { selectedTileStore } from "../stores/UI";
@@ -61,6 +62,9 @@
 	let t, l;
 	let mapFocus = true;
 	let serverCall;
+
+	let websocket; // shouldn't I wire up an Event thing to this?
+	let response; // ??
 
 	const defaultCanvas = (tile) => {
 		const tiledBackgroundCanvas = document.createElement("canvas");
@@ -338,6 +342,76 @@
 		console.log(status);
 		console.log("here");
 	}
+
+	async function tempWebsocket() {
+		// want this instead -> https://www.npmjs.com/package/svelte-websocket-store
+
+		const sleep = (ms) => {
+			return new Promise((resolve) => setTimeout(resolve, ms));
+		};
+
+		websocket = new WebSocket("ws://localhost:3000/websocket");
+
+		websocket.onopen = function () {
+			console.log("connection opened");
+			websocket.send(
+				JSON.stringify({
+					TilePlaced: { x: 1, y: 1, tileset: 0, idx: 50 },
+				})
+			);
+		};
+
+		// we don't know if the websocket is open yet.
+		// janky block until it's open
+		// need to do something taht reconnects
+		// jhonestly look at svelte-websocket-store
+		while (websocket.readyState !== websocket.OPEN) {
+			await sleep(1);
+		}
+
+		websocket.send(
+			JSON.stringify({
+				TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
+			})
+		);
+
+		websocket.send(
+			JSON.stringify({
+				TilePlaced: { x: 3, y: 1, tileset: 0, idx: 50 },
+			})
+		);
+
+		websocket.onclose = function () {
+			console.log("connection closed");
+		};
+
+		websocket.onmessage = function (e) {
+			console.log("received message: " + e.data);
+		};
+	}
+
+	async function tempWebsocketStore() {
+		const initialValue = {};
+		websocket = websocketStore(
+			"ws://localhost:3000/websocket",
+			initialValue,
+			[]
+		);
+		// receive JSON from server (push)
+		response = websocket.subscribe((value) => {
+			console.log("received message: " + JSON.stringify(value));
+		});
+
+		websocket.set({
+			TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
+		});
+	}
+
+	async function sendMessage() {
+		websocket.set({
+			TilePlaced: { x: 200, y: 1, tileset: 0, idx: 50 },
+		});
+	}
 </script>
 
 <!-- THIS IS STILL TRIGGERING on:keydown EVERYWHERE need to figure this out. -->
@@ -392,6 +466,8 @@
 	<p>{serverCall}</p>
 	<button type="button" on:click={tempDoPost}>Temp Save</button>
 	<button type="button" on:click={tempDoSaveAll}>Temp Save to Disk</button>
+	<button type="button" on:click={tempWebsocketStore}>Temp Websocket</button>
+	<button type="button" on:click={sendMessage}>Send Message</button>
 {/if}
 
 <style>

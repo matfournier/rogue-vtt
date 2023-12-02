@@ -21,3 +21,4 @@ uuid = {version = "1.4.1", features = [
 dashmap = "5.5.3"
 anyhow = "1.0.75"
 futures = "0.3.29"
+async-trait = "0.1.74"

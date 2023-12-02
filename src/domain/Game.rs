@@ -1,6 +1,6 @@
 // https://dev.to/alexeagleson/how-to-set-up-a-fullstack-rust-project-with-axum-react-vite-and-shared-types-429e?
 
-use crate::message::Message;
+use crate::event::Event;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_repr::*;

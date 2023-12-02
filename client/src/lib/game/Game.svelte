@@ -82,7 +82,7 @@
 			0,
 			0,
 			tileSize,
-			tileSize
+			tileSize,
 		);
 		context.save;
 		return tiledBackgroundCanvas;
@@ -101,7 +101,7 @@
 			cameraDimensions[0],
 			cameraDimensions[1],
 			mapSize[0],
-			mapSize[1]
+			mapSize[1],
 		);
 		viewHandlerFactory("RESET");
 
@@ -208,7 +208,7 @@
 					height: 6 * 24,
 					icons: tileSheet.icon,
 					sheetName: "dungeon",
-				})
+				}),
 			);
 		} else if (e.action.kind === UActionType.PopupFeature) {
 			modal.set(
@@ -217,7 +217,7 @@
 					height: 2 * 24,
 					icons: tileSheet.icon,
 					sheetName: "feature",
-				})
+				}),
 			);
 		} else if (e.action.kind === UActionType.PlaceToken) {
 			mapFocus = false;
@@ -229,14 +229,14 @@
 						mapFocus = true;
 						draw();
 					},
-				})
+				}),
 			);
 		} else if (e.action.kind === UActionType.MoveEntityStart) {
 			interfaceHandler = new MoveHandler(
 				camera,
 				tileSheet.icon,
 				selectedMapTile,
-				e.action
+				e.action,
 			);
 		} else if (e.action.kind === UActionType.Reset) {
 			viewHandlerFactory("RESET");
@@ -264,7 +264,7 @@
 			interfaceHandler = new ViewHandler(
 				camera,
 				tileSheet.icon,
-				selectedMapTile
+				selectedMapTile,
 			);
 			mode = "VIEW";
 		} else if (s === "DRAW") {
@@ -272,14 +272,14 @@
 				paletteSelected,
 				camera,
 				tileSheet.icon,
-				selectedMapTile
+				selectedMapTile,
 			);
 			mode = "DRAW";
 		} else if (s === "PLACE") {
 			interfaceHandler = new PlaceHandler(
 				camera,
 				tileSheet.icon,
-				selectedMapTile
+				selectedMapTile,
 			);
 			mode = "PLACE TOKEN";
 		}
@@ -350,14 +350,16 @@
 			return new Promise((resolve) => setTimeout(resolve, ms));
 		};
 
-		websocket = new WebSocket("ws://localhost:3000/websocket");
+		let params = `ws://localhost:3000/websocket?game_id=${gameId}level_id=todo`;
+
+		websocket = new WebSocket(params);
 
 		websocket.onopen = function () {
 			console.log("connection opened");
 			websocket.send(
 				JSON.stringify({
 					TilePlaced: { x: 1, y: 1, tileset: 0, idx: 50 },
-				})
+				}),
 			);
 		};
 
@@ -372,13 +374,13 @@
 		websocket.send(
 			JSON.stringify({
 				TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
-			})
+			}),
 		);
 
 		websocket.send(
 			JSON.stringify({
 				TilePlaced: { x: 3, y: 1, tileset: 0, idx: 50 },
-			})
+			}),
 		);
 
 		websocket.onclose = function () {
@@ -391,17 +393,19 @@
 	}
 
 	async function tempWebsocketStore() {
+		let params = `ws://localhost:3000/websocket?game_id=${gameId}&level_id=todo`;
+
 		const initialValue = {};
-		websocket = websocketStore(
-			"ws://localhost:3000/websocket",
-			initialValue,
-			[]
-		);
+		websocket = websocketStore(params, initialValue, []);
 		// receive JSON from server (push)
 		response = websocket.subscribe((value) => {
 			console.log("received message: " + JSON.stringify(value));
 		});
 
+		// this causes duplicates!
+		// because we set + broadcast this value, and then get it again
+		// which is very annoying
+		// need to do something better here.
 		websocket.set({
 			TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
 		});

@@ -1,6 +1,8 @@
-use crate::domain::event::Message;
+use crate::domain::event::Event;
+use crate::domain::event::Msg;
 use crate::domain::game;
 use crate::domain::game::GameState;
+use crate::event::InternalEvent;
 
 use async_trait::async_trait;
 
@@ -13,7 +15,10 @@ use tokio::sync::mpsc::Receiver;
 use crate::domain::game::DTOState;
 use tokio::sync::broadcast;
 
+use axum::extract::ws::{Message, WebSocket};
+
 use crate::state::memory::game::Tile;
+use futures::{sink::SinkExt, stream::StreamExt};
 
 pub type VecState = GameState<Vec<Option<u8>>>;
 
@@ -27,17 +32,114 @@ pub type VecState = GameState<Vec<Option<u8>>>;
 //    - since every event would have a state with a timestamp maybe?   IMHO the timestamp should come from the server?
 
 pub struct GameMetadata {
-    pub currentLevel: String,
+    pub current_level: String,
     pub path: String,
-    pub lastSave: Option<i64>,
+    pub last_save: Option<i64>,
 }
 
 pub struct GameChannel {
-    pub tx: broadcast::Sender<String>,
-    pub queue: Vec<Message>,
+    pub tx: Arc<broadcast::Sender<String>>,
+    pub queue: Vec<Msg>,
     // how do we handle level changes?
     // changing level writes to disk and updates everything maybe?
     pub metadata: GameMetadata,
+}
+
+pub struct SocketConnector {
+    pub state: Arc<DashMap<String, GameChannel>>,
+    pub loader: Arc<dyn Loader + Send + Sync>,
+}
+
+impl SocketConnector {
+    pub async fn connect(&self, game_id: &str, socket: WebSocket, user: &str) {
+        let s = self.state.clone();
+        // todo make sure the game already exists otherwise fail.
+        println!("CONNECTING");
+        let game = s.get(game_id);
+        let broadcast_tx = match game {
+            Some(g) => g.tx.clone(),
+            None => {
+                let (tx, _rx) = broadcast::channel(100);
+                let atx = Arc::new(tx);
+                let gc = GameChannel {
+                    tx: atx.clone(),
+                    queue: Vec::new(),
+                    metadata: GameMetadata {
+                        current_level: "todo".to_string(),
+                        path: "todo".to_string(),
+                        last_save: None,
+                    },
+                };
+                s.insert(game_id.to_string(), gc);
+                atx.clone()
+            }
+        };
+
+        let (mut sender, mut receiver) = socket.split();
+
+        let mut rx = broadcast_tx.subscribe();
+
+        // Now send the "joined" message to all subscribers.
+        let zzz = Event::TextMessage {
+            user: "server".to_string(),
+            msg: format!("UNKNOWN joined."),
+        };
+
+        let msg = serde_json::to_string(&zzz).unwrap();
+        tracing::debug!("{msg}");
+        let _ = broadcast_tx.send(msg);
+
+        // Spawn the first task that will receive broadcast messages and send text
+        // messages over the websocket to our client.
+        let mut send_task = tokio::spawn(async move {
+            while let Ok(msg) = rx.recv().await {
+                // In any websocket error, break loop.
+                if sender.send(Message::Text(msg)).await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        // Clone things we want to pass (move) to the receiving task.
+        let tx = broadcast_tx.clone();
+        // let name = username.clone();
+
+        // Spawn a task that takes messages from the websocket,
+        // deserializes the event and dispatches it to every other connected websocket
+        // janky error handling TODO: add in proper logging
+        let mut recv_task = tokio::spawn(async move {
+            while let Some(Ok(Message::Text(text))) = receiver.next().await {
+                dbg!(text.clone());
+                match serde_json::from_str::<Event>(&text) {
+                    Ok(_) => {
+                        let _ = tx.send(text);
+                    }
+                    Err(_) => {
+                        println!("something went wrong with");
+                        dbg!(text);
+                    }
+                }
+            }
+        });
+
+        // TODO ask in the rust channel in axum how to tell when the last websocket closes?
+        // state.broadcast_tx.clone().receiver_count()
+
+        // If any one of the tasks run to completion, we abort the other.
+        tokio::select! {
+            _ = (&mut send_task) => recv_task.abort(), // . here add a print statement, curuous if we can use this + receiver_count to clean out our map later
+            _ = (&mut recv_task) => send_task.abort(),
+        };
+
+        // Send "user left" message (similar to "joined" above).
+        // let msg = format!("{username} left.");
+        // tracing::debug!("{msg}");
+        // let _ = state.tx.send(msg);
+
+        // Remove username from map so new clients can take it again.
+        // state.user_set.lock().unwrap().remove(&username);
+        println!("websocket connected!")
+    }
 }
 
 // if we wanted to increase parallism we could do make N of these
@@ -48,15 +150,47 @@ pub struct GameChannel {
 pub struct Dispatcher {
     // GameId -> GameChannel
     state: Arc<DashMap<String, GameChannel>>,
-    rx: Receiver<Message>,
+    rx: Receiver<Msg>,
     loader: Arc<dyn Loader + Send + Sync>,
+}
+
+impl Dispatcher {
+    pub fn make(
+        rx: Receiver<Msg>,
+        loader: Arc<dyn Loader + Send + Sync>,
+        state: Arc<DashMap<String, GameChannel>>,
+    ) -> Self {
+        Dispatcher {
+            state: state,
+            rx: rx,
+            loader: loader,
+        }
+    }
+
+    pub async fn start(&mut self) {
+        // while let Some(msg) = self.rx.recv().await {
+        //     match msg {
+        //         Msg::Interal { event } => match event {
+        //             InternalEvent::InternalSocketJoin {
+        //                 user,
+        //                 stream,
+        //                 game_id,
+        //             } => todo!(),
+        //         },
+        //         _ => (),
+        //     }
+        //     println!("Recieved message");
+        //     // dbg!(msg);
+        //     // match message {}
+        // }
+    }
 }
 
 #[async_trait]
 pub trait Loader {
     async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<u8>>>>;
     async fn get_for_json(&self, path: String) -> Option<GameState<Vec<Tile>>>;
-    async fn save(&self, path: String);
+    async fn save_direct(&self, state: &GameState<Vec<Option<u8>>>);
     fn path_with_game(&self, game_id: &str) -> String {
         crate::state::db::game_to_path(game_id)
     }
@@ -70,127 +204,15 @@ pub struct LocalLoader;
 #[async_trait]
 impl Loader for LocalLoader {
     async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<u8>>>> {
-        None
+        crate::state::db::load_rust(&path).await
     }
     async fn get_for_json(&self, path: String) -> Option<GameState<Vec<Tile>>> {
-        None
+        crate::state::db::load_json(&path).await
     }
-    async fn save(&self, path: String) {
-        ();
-    }
-}
-
-impl Dispatcher {
-    pub fn make(rx: Receiver<Message>, loader: Arc<dyn Loader + Send + Sync>) -> Self {
-        Dispatcher {
-            state: Arc::new(DashMap::new()),
-            rx: rx,
-            loader: loader,
-        }
-    }
-
-    pub async fn start(&mut self) {
-        while let Some(msg) = self.rx.recv().await {
-            println!("Recieved message");
-            dbg!(msg);
-            // match message {}
-        }
+    async fn save_direct(&self, state: &GameState<Vec<Option<u8>>>) {
+        crate::state::db::save(state).await
+        // probably need some state passed in to make it make sense
+        // fn will load the json into memory, apply the queue, then save.
+        // ();
     }
 }
-
-// pub struct MemoryReceiver {
-//     state: Arc<DashMap<String, VecState>>,
-//     rx: Receiver<Event>,
-// }
-// impl MemoryReceiver {
-//     pub fn make(rx: Receiver<Event>, d: Arc<DashMap<String, VecState>>) -> Self {
-//         MemoryReceiver { state: d, rx: rx }
-//     }
-// }
-
-// impl MemoryReceiver {
-//     pub async fn start(&mut self) {
-//         while let Some(message) = self.rx.recv().await {
-//             println!("Recieved a save message!");
-//             match message {
-//                 Event::EntireGame { game } => {
-//                     let _ = dbg!(game.clone());
-//                     let s = self.state.clone();
-//                     let _ = s.insert(game.id.clone(), game);
-
-//                     // self.add(&lvl.id.clone(), lvl);
-//                 }
-//                 Event::TriggerSave { game_id, level_id } => {
-//                     let s = self.state.clone();
-//                     let existing_game = s.get(&game_id);
-//                     dbg!(game_id.clone());
-//                     if let Some(game) = existing_game {
-//                         crate::state::db::save(&game).await
-//                     }
-//                 }
-//                 _ => (),
-//             }
-//         }
-//     }
-// }
-
-// // look into scheduling a save to disk at a regular interval
-
-// // let mut interval_timer = tokio::time::interval(chrono::Duration::days(1).to_std().unwrap());
-// // loop {
-// //     // Wait for the next interval tick
-// //     interval_timer.tick().await;
-// //     tokio::spawn(async { do_my_task().await; }); // For async task
-// //     tokio::task::spawn_blocking(|| do_my_task()); // For blocking task
-// // }
-// pub struct MemoryHandler<T> {
-//     state: Arc<DashMap<String, T>>,
-// }
-
-// impl<T> MemoryHandler<T>
-// where
-//     T: Clone + Serialize,
-// {
-//     pub fn make(d: Arc<DashMap<String, T>>) -> Self {
-//         MemoryHandler { state: d }
-//     }
-//     fn add(&self, key: &str, element: T) {
-//         let w = self.state.clone();
-//         w.insert(key.to_string(), element);
-//     }
-
-//     fn get_json(&self, key: &str) -> Option<Json<T>> {
-//         let w = self.state.clone();
-//         w.get(key).map(|x| Json(x.clone()))
-//     }
-// }
-
-// impl MemoryHandler<VecState> {
-//     pub fn create_game(&self, description: &str, xy: &(u32, u32)) -> VecState {
-//         let gamestate = domain::game::GameState::make(description.to_string(), *xy);
-//         // TODO: write to durable store here
-//         // .     also check if it already exists
-//         let game_id = &gamestate.id.clone();
-//         self.add(&gamestate.id.clone(), gamestate.clone());
-//         dbg!(game_id.clone());
-//         gamestate
-//     }
-//     // need to refactor how I store levels for a game, a second map maybe?
-//     pub async fn get_game_json(&self, game_id: &str, level_id: &str) -> Option<String> {
-//         println!("here!");
-//         match self.get_json(game_id) {
-//             Some(game) => Some(game.toJson()),
-//             None => {
-//                 let maybe_game = crate::state::db::load(game_id, level_id).await;
-//                 if let Some(game) = maybe_game {
-//                     self.add(&game.id.clone(), game.clone());
-//                     Some(game.clone().toJson())
-//                 } else {
-//                     None
-//                 }
-//             }
-//         }
-//     }
-//     // TODO: loading a level within an existing game
-//     // data repr. is all wrong for this.
-// }

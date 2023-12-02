@@ -2,6 +2,7 @@ use super::game::GameState;
 
 use crate::domain::game::Entity;
 use crate::VecState;
+use axum::extract::ws::WebSocket;
 use serde::{Deserialize, Serialize};
 
 // Todo implement into_iter() for this type
@@ -13,8 +14,13 @@ pub struct Bounds {
     y_2: u16,
 }
 
+pub enum Msg {
+    GameEvent { msg: GameEvent },
+    Interal { event: InternalEvent },
+}
+
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Message {
+pub struct GameEvent {
     pub data: Event,
     pub game_id: String,
     pub user: Option<String>,
@@ -65,6 +71,15 @@ pub enum Event {
         user: String,
         msg: String,
     },
+}
+
+pub enum InternalEvent {
+    // Infra Messages
+    // InternalSocketJoin {
+    //     user: String,
+    //     stream: &WebSocket,
+    //     game_id: String,
+    // },
 }
 
 // https://users.rust-lang.org/t/axum-within-the-standard-chat-example-how-would-you-implement-multiple-chat-rooms/82519/2

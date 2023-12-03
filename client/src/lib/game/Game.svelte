@@ -1,11 +1,9 @@
 <script>
 	import { onDestroy } from "svelte";
 	import { onMount } from "svelte";
-	import { Grid, SquareCounter } from "../domain/Grid";
+	import { Grid } from "../domain/Grid";
 	import Toolbar from "../Toolbar.svelte";
-	import { MapState, dungeonMapFrom } from "../domain/DungeonMap";
-	import TilePicker from "../popups/TilePicker.svelte";
-	import EntityPicker from "../popups/EntityPicker.svelte";
+	import { dungeonMapFrom } from "../domain/DungeonMap";
 	import { modal } from "../stores/UI";
 	import EntityForm from "../popups/EntityForm.svelte";
 	import Palette from "../popups/Palette.svelte";
@@ -24,7 +22,6 @@
 		PlaceHandler,
 		UActionType,
 		ViewHandler,
-		toInitAction,
 	} from "./Interaction";
 	import { Camera } from "./Camera";
 	import { LocalEventSystem, RemoteEventSystem } from "../domain/EventSystem";
@@ -62,9 +59,6 @@
 	let t, l;
 	let mapFocus = true;
 	let serverCall;
-
-	let websocket; // shouldn't I wire up an Event thing to this?
-	let response; // ??
 
 	const defaultCanvas = (tile) => {
 		const tiledBackgroundCanvas = document.createElement("canvas");
@@ -107,6 +101,12 @@
 
 		map = dungeonMapFrom(gs.level, tileSheet, camera);
 
+		let gameContext = {
+			gameId: gs.id,
+			levelId: gs.level.id,
+			userId: "TODO",
+		};
+
 		// let map = new MapState(
 		// 	mapSize[0],
 		// 	mapSize[1],
@@ -130,6 +130,7 @@
 			new LocalEventSystem(map, entities, camera),
 			websocket,
 			context,
+			gameContext,
 		);
 		handleSize();
 		stores = {
@@ -350,29 +351,12 @@
 
 	function getWebsocketStore() {
 		let params = `ws://localhost:3000/websocket?game_id=${gameId}&level_id=todo`;
-		const initialValue = {};
-		websocket = websocketStore(params, initialValue, []);
-
 		// receive JSON from server (push)
 		// websocket.subscribe((value) => {
 		// 	console.log("received message: " + JSON.stringify(value));
 		// });
 
-		return websocket;
-
-		// this causes duplicates!
-		// because we set + broadcast this value, and then get it again
-		// which is very annoying
-		// need to do something better here.
-		// websocket.set({
-		// 	TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
-		// });
-	}
-
-	async function sendMessage() {
-		websocket.set({
-			TilePlaced: { x: 200, y: 1, tileset: 0, idx: 50 },
-		});
+		return websocketStore(params, {}, []);
 	}
 </script>
 
@@ -428,8 +412,6 @@
 	<p>{serverCall}</p>
 	<button type="button" on:click={tempDoPost}>Temp Save</button>
 	<button type="button" on:click={tempDoSaveAll}>Temp Save to Disk</button>
-	<!-- <button type="button" on:click={tempWebsocketStore}>Temp Websocket</button> -->
-	<button type="button" on:click={sendMessage}>Send Message</button>
 {/if}
 
 <style>

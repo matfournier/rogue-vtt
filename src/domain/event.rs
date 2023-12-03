@@ -8,15 +8,15 @@ use serde::{Deserialize, Serialize};
 // Todo implement into_iter() for this type
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Bounds {
-    x_1: u16,
-    x_2: u16,
-    y_1: u16,
-    y_2: u16,
+    x: u16,
+    xx: u16,
+    y: u16,
+    yy: u16,
 }
 
 pub enum Msg {
     Game { msg: GameEvent },
-    Interal { event: InternalEvent },
+    Internal { event: InternalEvent },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,6 +29,7 @@ pub struct GameEvent {
 // idea that everything would get sent through the pipe to the handler
 // can we send TriggerSave there too? Or should that be inside of the hanlder itself (probably?)
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum Event {
     EntireGame {
         game: VecState,
@@ -48,12 +49,12 @@ pub enum Event {
         y: u16,
         layer: u16,
     },
-    FillAction {
+    Fill {
         bounds: Bounds,
         tileset: u16,
         idx: u16,
     },
-    ClearAction {
+    Clear {
         bounds: Bounds,
         layer: u16,
     },

@@ -1,5 +1,5 @@
 import type { Camera } from "../game/Camera";
-import { EventType, type Event, ActionType, type GameEvent } from "../game/Interaction";
+import { EventType, type Event, ActionType, type GameEvent, parseAction } from "../game/Interaction";
 import type { MapState } from "./DungeonMap";
 import type { EntityState } from "./EntityRenderer";
 
@@ -7,6 +7,77 @@ import type { EntityState } from "./EntityRenderer";
 export interface EventSystem {
     event(e: Event): void
     render(context: CanvasRenderingContext2D): void
+}
+
+export class RemoteEventSystem implements EventSystem {
+    private underlying: LocalEventSystem
+    private socket: any
+    private context: CanvasRenderingContext2D;
+
+    constructor(eventSystem: LocalEventSystem, store: any, context: CanvasRenderingContext2D) {
+        this.underlying = eventSystem;
+        this.socket = store;
+        this.context = context;
+        this.socket.subscribe((value) => {
+            console.log("received message: " + JSON.stringify(value));
+            // note all my events are incorrect need to figure them out
+            // the next line throws because we send the wrong kind of events. 
+            if (value !== undefined || value !== null || Object.keys(value).length !== 0) {
+                console.log("here");
+                let parse = parseAction(value);
+                if (parse !== undefined) {
+                    this.event_local({
+                        type: EventType.GAME,
+                        action: parse
+                    })
+                }
+                // TODO parse into a GameEvent right now we are casting and it sucks
+                // this.event_local(value as GameEvent);
+            };
+        });
+    }
+
+    // sends the websocket the event
+    // when we recieve it back it goes to event_local via the subscribe method 
+    event(e: GameEvent): void {
+        // need to match here to only send the events I need to into the underlying local system.
+        let a = e.action;
+        switch (a.kind) {
+            case ActionType.TilePlaced:
+                console.log("placing tile...");
+                // need to convert this into something rust will understand 
+                // TilePlaced {
+                //     x: u16,
+                //     y: u16,
+                //     tileset: u16,
+                //     idx: u16,
+                // },
+                let v = {
+                    "TilePlaced": {
+                        x: a.xy[0],
+                        y: a.xy[1],
+                        tileset: a.tileset,
+                        idx: a.idx
+                    }
+                }
+                this.socket.set(v);
+                break;
+            case ActionType.TextMessage:
+                console.log("text message" + JSON.stringify(e));
+                break;
+            default:
+                this.event_local(e);
+        }
+    }
+
+    event_local(e: GameEvent): void {
+        this.underlying.event(e);
+        this.render(this.context);
+    }
+
+    render(context: CanvasRenderingContext2D): void {
+        this.underlying.render(context)
+    }
 }
 
 export class LocalEventSystem implements EventSystem {
@@ -23,6 +94,7 @@ export class LocalEventSystem implements EventSystem {
 
     event(e: GameEvent): void {
         let a = e.action;
+        console.log("inside local eventystem");
         console.log(a);
         switch (a.kind) {
             case ActionType.TilePlaced:

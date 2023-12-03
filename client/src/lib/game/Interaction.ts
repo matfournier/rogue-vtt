@@ -11,18 +11,43 @@ export enum EventType {
     GAME
 }
 
+// not sure how string enums will help me 
+// we get from Rust something like 
+// "TextMessage": {
+//    payload_keys_here 
+//}
+
+// to convert ActionType to string you need to do ActionType[idx] I believe
+// so also need to convert this to the backend somehow for what Rust expects
+// which is a Json with the first key as the string and the value keys nested under that 
+
 export enum ActionType {
-    TilePlaced,
-    TileRemoved,
-    Fill,
-    Clear,
-    AddToken,
+    TilePlaced = "TilePlaced",
+    TileRemoved = "TileRemoved",
+    Fill = "Fill",
+    Clear = "Clear",
+    AddToken = "AddToken",
     // TokenDescription,
-    RemoveToken,
-    RenameToken,
-    MoveToken,
-    Init,
-    Load,
+    RemoveToken = "RemoveToken",
+    RenameToken = "RenameToken",
+    MoveToken = "MoveToken",
+    Init = "Init",
+    Load = "Load",
+    TextMessage = "TextMessage",
+}
+
+export function parseAction(o: any): Action | undefined {
+    let payload = null;
+    switch (Object.keys(o)[0]) {
+        case "TextMessage":
+            payload = o["TextMessage"];
+            return { kind: ActionType.TextMessage, user: payload["user"], msg: payload["msg"] }
+        case "TilePlaced":
+            payload = o["TilePlaced"];
+            return { kind: ActionType.TilePlaced, xy: [payload["x"], payload["y"]], tileset: payload["tileset"], idx: payload["idx"] }
+        default:
+            console.log(o)
+    }
 }
 
 export enum UActionType {
@@ -34,7 +59,7 @@ export enum UActionType {
     ChangeInteraction,
     PlaceToken,
     Ignore,
-    MoveEntityStart
+    MoveEntityStart,
 }
 
 export enum InteractionType {
@@ -131,6 +156,13 @@ export type InitAction = {
 
 // // }
 
+export type TextMessageAction = {
+    kind: ActionType.TextMessage,
+    user: String,
+    msg: String,
+
+}
+
 export function toInitAction(from: any): InitAction {
     return from as InitAction
 }
@@ -139,7 +171,7 @@ export function toInitAction(from: any): InitAction {
 // TODO change default tile action 
 
 export type Action = TilePlacedAction | TileRemovedAction | FillAction |
-    ClearAction | AddTokenAction | RemoveTokenAction | MoveTokenAction | InitAction
+    ClearAction | AddTokenAction | RemoveTokenAction | MoveTokenAction | InitAction | TextMessageAction
 
 
 export type ResetUAction = {
@@ -317,14 +349,25 @@ export class DrawHandler implements InteractionHandler {
             let bounds = this.clickBounds.bounds();
             if (mode.minor === "DRAW") {
                 this.mouseMode.reset();
-                return new Array({
-                    type: EventType.GAME, action: {
-                        kind: ActionType.Fill,
-                        bounds: bounds,
-                        tileset: this.getTileLayer(),
-                        idx: this.selectedTile.idx
-                    }
-                })
+                if (bounds.x[0] === bounds.x[1] && bounds.y[0] === bounds.y[1]) {
+                    return new Array({
+                        type: EventType.GAME, action: {
+                            kind: ActionType.TilePlaced,
+                            xy: [bounds.x[0], bounds.y[0]],
+                            tileset: this.getTileLayer(),
+                            idx: this.selectedTile.idx
+                        }
+                    })
+                } else {
+                    return new Array({
+                        type: EventType.GAME, action: {
+                            kind: ActionType.Fill,
+                            bounds: bounds,
+                            tileset: this.getTileLayer(),
+                            idx: this.selectedTile.idx
+                        }
+                    })
+                }
                 // return a bunch of create tiles events 
             } else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
                 this.mouseMode.reset();

@@ -7,6 +7,8 @@ use crate::state::memory::Msg::Game;
 
 use async_trait::async_trait;
 
+use std::time::{SystemTime, UNIX_EPOCH};
+
 use axum::Json;
 use dashmap::DashMap;
 use serde::Serialize;
@@ -140,6 +142,7 @@ impl SocketConnector {
                     Err(_) => {
                         println!("something went wrong with");
                         dbg!(text);
+                        println!("above---^");
                     }
                 }
             }
@@ -201,6 +204,8 @@ impl Dispatcher {
 
                 _ => (),
             }
+            let ts = get_epoch_ms();
+            dbg!(ts);
             println!("Recieved message");
             // dbg!(msg);
             // match message {}
@@ -237,4 +242,11 @@ impl Loader for LocalLoader {
         // fn will load the json into memory, apply the queue, then save.
         // ();
     }
+}
+
+fn get_epoch_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
 }

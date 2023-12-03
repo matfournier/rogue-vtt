@@ -27,7 +27,7 @@
 		toInitAction,
 	} from "./Interaction";
 	import { Camera } from "./Camera";
-	import { LocalEventSystem } from "../domain/EventSystem";
+	import { LocalEventSystem, RemoteEventSystem } from "../domain/EventSystem";
 	import Sidebar from "../Sidebar.svelte";
 	import { entitiesToJson, parseGamestate } from "../transfer/Transfer";
 
@@ -119,13 +119,18 @@
 		gs.entities.npcs.forEach((e) => entities.addEntity(e));
 		gs.entities.players.forEach((e) => entities.addEntity(e));
 		gameId = gs.id;
-		es = new LocalEventSystem(map, entities, camera);
 		// TODO: this default canvas stuff should move somewhere else.
 		let defaultTile = tileSheet.dungeon.tiles[101];
 		context = canvas.getContext("2d");
 		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
 		context.fillStyle = pattern;
 		context.font = "18pt Monospace";
+		let websocket = getWebsocketStore();
+		es = new RemoteEventSystem(
+			new LocalEventSystem(map, entities, camera),
+			websocket,
+			context,
+		);
 		handleSize();
 		stores = {
 			selected: selectedTileStore.subscribe((value) => {
@@ -343,72 +348,25 @@
 		console.log("here");
 	}
 
-	async function tempWebsocket() {
-		// want this instead -> https://www.npmjs.com/package/svelte-websocket-store
-
-		const sleep = (ms) => {
-			return new Promise((resolve) => setTimeout(resolve, ms));
-		};
-
-		let params = `ws://localhost:3000/websocket?game_id=${gameId}level_id=todo`;
-
-		websocket = new WebSocket(params);
-
-		websocket.onopen = function () {
-			console.log("connection opened");
-			websocket.send(
-				JSON.stringify({
-					TilePlaced: { x: 1, y: 1, tileset: 0, idx: 50 },
-				}),
-			);
-		};
-
-		// we don't know if the websocket is open yet.
-		// janky block until it's open
-		// need to do something taht reconnects
-		// jhonestly look at svelte-websocket-store
-		while (websocket.readyState !== websocket.OPEN) {
-			await sleep(1);
-		}
-
-		websocket.send(
-			JSON.stringify({
-				TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
-			}),
-		);
-
-		websocket.send(
-			JSON.stringify({
-				TilePlaced: { x: 3, y: 1, tileset: 0, idx: 50 },
-			}),
-		);
-
-		websocket.onclose = function () {
-			console.log("connection closed");
-		};
-
-		websocket.onmessage = function (e) {
-			console.log("received message: " + e.data);
-		};
-	}
-
-	async function tempWebsocketStore() {
+	function getWebsocketStore() {
 		let params = `ws://localhost:3000/websocket?game_id=${gameId}&level_id=todo`;
-
 		const initialValue = {};
 		websocket = websocketStore(params, initialValue, []);
+
 		// receive JSON from server (push)
-		response = websocket.subscribe((value) => {
-			console.log("received message: " + JSON.stringify(value));
-		});
+		// websocket.subscribe((value) => {
+		// 	console.log("received message: " + JSON.stringify(value));
+		// });
+
+		return websocket;
 
 		// this causes duplicates!
 		// because we set + broadcast this value, and then get it again
 		// which is very annoying
 		// need to do something better here.
-		websocket.set({
-			TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
-		});
+		// websocket.set({
+		// 	TilePlaced: { x: 2, y: 1, tileset: 0, idx: 50 },
+		// });
 	}
 
 	async function sendMessage() {
@@ -470,7 +428,7 @@
 	<p>{serverCall}</p>
 	<button type="button" on:click={tempDoPost}>Temp Save</button>
 	<button type="button" on:click={tempDoSaveAll}>Temp Save to Disk</button>
-	<button type="button" on:click={tempWebsocketStore}>Temp Websocket</button>
+	<!-- <button type="button" on:click={tempWebsocketStore}>Temp Websocket</button> -->
 	<button type="button" on:click={sendMessage}>Send Message</button>
 {/if}
 

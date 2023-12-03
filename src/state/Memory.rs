@@ -2,7 +2,8 @@ use crate::domain::event::Event;
 use crate::domain::event::Msg;
 use crate::domain::game;
 use crate::domain::game::GameState;
-use crate::event::InternalEvent;
+use crate::event::GameEvent;
+use crate::state::memory::Msg::Game;
 
 use async_trait::async_trait;
 
@@ -14,6 +15,7 @@ use tokio::sync::mpsc::Receiver;
 
 use crate::domain::game::DTOState;
 use tokio::sync::broadcast;
+use tokio::sync::mpsc::Sender;
 
 use axum::extract::ws::{Message, WebSocket};
 
@@ -48,6 +50,7 @@ pub struct GameChannel {
 pub struct SocketConnector {
     pub state: Arc<DashMap<String, GameChannel>>,
     pub loader: Arc<dyn Loader + Send + Sync>,
+    pub sender: Arc<Sender<Msg>>,
 }
 
 impl SocketConnector {
@@ -107,12 +110,32 @@ impl SocketConnector {
         // Spawn a task that takes messages from the websocket,
         // deserializes the event and dispatches it to every other connected websocket
         // janky error handling TODO: add in proper logging
+
+        let gtid: String = game_id.to_string();
+        let sender = self.sender.clone();
         let mut recv_task = tokio::spawn(async move {
             while let Some(Ok(Message::Text(text))) = receiver.next().await {
                 dbg!(text.clone());
                 match serde_json::from_str::<Event>(&text) {
-                    Ok(_) => {
-                        let _ = tx.send(text);
+                    Ok(v) => {
+                        // I wonder if this should go in it's own thread?
+                        // weird when I tried to spawn a thread to do this get tons
+                        // of ownership issues on gtid and sender
+                        let msg = Game {
+                            msg: GameEvent {
+                                data: v,
+                                game_id: gtid.clone(),
+                                user: None,
+                                level: None,
+                            },
+                        };
+                        let socket_msg = match sender.try_send(msg) {
+                            Ok(_) => text,
+                            Err(_) => "ERROR: could not send message to server for state storage"
+                                .to_string(),
+                        };
+
+                        let _ = tx.send(socket_msg);
                     }
                     Err(_) => {
                         println!("something went wrong with");
@@ -168,21 +191,20 @@ impl Dispatcher {
     }
 
     pub async fn start(&mut self) {
-        // while let Some(msg) = self.rx.recv().await {
-        //     match msg {
-        //         Msg::Interal { event } => match event {
-        //             InternalEvent::InternalSocketJoin {
-        //                 user,
-        //                 stream,
-        //                 game_id,
-        //             } => todo!(),
-        //         },
-        //         _ => (),
-        //     }
-        //     println!("Recieved message");
-        //     // dbg!(msg);
-        //     // match message {}
-        // }
+        while let Some(msg) = self.rx.recv().await {
+            match msg {
+                Msg::Game { msg } => {
+                    dbg!(msg.data);
+                    println!("state store got a message!");
+                    ()
+                }
+
+                _ => (),
+            }
+            println!("Recieved message");
+            // dbg!(msg);
+            // match message {}
+        }
     }
 }
 

@@ -42,7 +42,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
 struct AppState {
-    state_tx: Sender<event::Msg>,
+    state_tx: Arc<Sender<event::Msg>>,
     connector: Arc<SocketConnector>,
     loader: Arc<dyn Loader + Send + Sync>,
 }
@@ -101,11 +101,14 @@ async fn main() {
         dispatcher.start().await;
     });
 
+    let arc_state_tx = Arc::new(state_tx);
+
     let state = AppState {
-        state_tx: state_tx,
+        state_tx: arc_state_tx.clone(),
         connector: Arc::new(SocketConnector {
             state: state.clone(),
             loader: loader.clone(),
+            sender: arc_state_tx.clone(),
         }),
         loader: loader.clone(),
     };

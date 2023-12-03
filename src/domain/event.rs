@@ -15,7 +15,7 @@ pub struct Bounds {
 }
 
 pub enum Msg {
-    GameEvent { msg: GameEvent },
+    Game { msg: GameEvent },
     Interal { event: InternalEvent },
 }
 

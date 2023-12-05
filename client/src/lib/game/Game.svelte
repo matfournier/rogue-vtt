@@ -107,14 +107,6 @@
 			userId: "TODO",
 		};
 
-		// let map = new MapState(
-		// 	mapSize[0],
-		// 	mapSize[1],
-		// 	tileSheet,
-		// 	camera,
-		// 	"someId",
-		// 	"someDescription"
-		// );
 		entities = new EntityState(camera);
 		gs.entities.npcs.forEach((e) => entities.addEntity(e));
 		gs.entities.players.forEach((e) => entities.addEntity(e));

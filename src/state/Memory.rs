@@ -1,11 +1,9 @@
 use crate::domain::event::Event;
 use crate::domain::event::Msg;
-use crate::domain::game;
 use crate::domain::game::GameState;
 use crate::event::GameEvent;
 use crate::state::memory::Msg::Game;
-
-use async_trait::async_trait;
+use crate::Loader;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -21,7 +19,6 @@ use tokio::sync::mpsc::Sender;
 
 use axum::extract::ws::{Message, WebSocket};
 
-use crate::state::memory::game::Tile;
 use futures::{sink::SinkExt, stream::StreamExt};
 
 pub type VecState = GameState<Vec<Option<u8>>>;
@@ -64,7 +61,7 @@ impl SocketConnector {
         let broadcast_tx = match game {
             Some(g) => g.tx.clone(),
             None => {
-                let (tx, _rx) = broadcast::channel(100);
+                let (tx, _rx) = broadcast::channel(150);
                 let atx = Arc::new(tx);
                 let gc = GameChannel {
                     tx: atx.clone(),
@@ -148,13 +145,18 @@ impl SocketConnector {
             }
         });
 
-        // TODO ask in the rust channel in axum how to tell when the last websocket closes?
-        // state.broadcast_tx.clone().receiver_count()
-
         // If any one of the tasks run to completion, we abort the other.
         tokio::select! {
-            _ = (&mut send_task) => recv_task.abort(), // . here add a print statement, curuous if we can use this + receiver_count to clean out our map later
-            _ = (&mut recv_task) => send_task.abort(),
+            _ = (&mut send_task) => {
+                recv_task.abort();
+                println!("send_task abort!");
+                println!("count: {}", broadcast_tx.receiver_count());
+            }, // . here add a print statement, curuous if we can use this + receiver_count to clean out our map later
+            _ = (&mut recv_task) => {
+                send_task.abort();
+                println!("recv_task abort!");
+                println!("count: {}", broadcast_tx.receiver_count());
+            }
         };
 
         // Send "user left" message (similar to "joined" above).
@@ -210,37 +212,6 @@ impl Dispatcher {
             // dbg!(msg);
             // match message {}
         }
-    }
-}
-
-#[async_trait]
-pub trait Loader {
-    async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<u8>>>>;
-    async fn get_for_json(&self, path: String) -> Option<GameState<Vec<Tile>>>;
-    async fn save_direct(&self, state: &GameState<Vec<Option<u8>>>);
-    fn path_with_game(&self, game_id: &str) -> String {
-        crate::state::db::game_to_path(game_id)
-    }
-    fn path_with_level(&self, game_id: &str, level_id: &str) -> String {
-        crate::state::db::game_level_to_path(game_id, level_id)
-    }
-}
-
-pub struct LocalLoader;
-
-#[async_trait]
-impl Loader for LocalLoader {
-    async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<u8>>>> {
-        crate::state::db::load_rust(&path).await
-    }
-    async fn get_for_json(&self, path: String) -> Option<GameState<Vec<Tile>>> {
-        crate::state::db::load_json(&path).await
-    }
-    async fn save_direct(&self, state: &GameState<Vec<Option<u8>>>) {
-        crate::state::db::save(state).await
-        // probably need some state passed in to make it make sense
-        // fn will load the json into memory, apply the queue, then save.
-        // ();
     }
 }
 

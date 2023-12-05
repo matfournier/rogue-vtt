@@ -1,9 +1,10 @@
 mod domain;
 mod state;
 
+use crate::state::loader;
+use crate::state::loader::Loader;
+use crate::state::loader::LocalLoader;
 use crate::state::memory::GameChannel;
-use crate::state::memory::Loader;
-use crate::state::memory::LocalLoader;
 
 use axum::{
     extract::{
@@ -157,7 +158,7 @@ async fn show_hello() -> Response {
 
 async fn load_game(State(state): State<AppState>, Path(id): Path<String>) -> Response {
     let loader = state.loader.clone();
-    let resp = loader.get_for_json(loader.path_with_game(&id)).await;
+    let resp = loader.get_for_json(loader::path_with_game(&id)).await;
     match resp {
         Some(game) => serde_json::to_string(&game).unwrap().into_response(),
         None => StatusCode::NOT_FOUND.into_response(),
@@ -202,53 +203,23 @@ async fn create_game(
     }
 }
 
-// async fn save_game(State(state): State<AppState>, Json(game): Json<DTOState>) -> Response {
-//     let s = state.clone();
-//     let game_id = game.id.clone();
-//     // TODO -> change this to be a direct save
-//     // probably still in it's own thread
-//     tokio::spawn(async move {
-//         s.state_tx
-//             .clone()
-//             .send(event::Event::EntireGame {
-//                 game: game.toRust(),
-//             })
-//             .await
-//             .unwrap()
-//     })
-//     .await
-//     .unwrap();
-
-//     StatusCode::OK.into_response()
-// }
-
-// async fn save_game_level(
-//     State(state): State<AppState>,
-//     Json(game_lvl): Json<GameLevelIdParam>,
-// ) -> Response {
-//     let s = state.clone();
-//     let _ = tokio::spawn(async move {
-//         let _ = s
-//             .state_tx
-//             .clone()
-//             .send(event::Event::TriggerSave {
-//                 game_id: game_lvl.game_id,
-//                 level_id: game_lvl.level_id,
-//             })
-//             .await;
-//     })
-//     .await;
-
-//     StatusCode::OK.into_response()
-// }
-
 // Websocket stuff: note needs to get the room from the gameId
+// if the game doesn't exist then reject, should only connect valid games
 async fn websocket_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
     Query(params): Query<GameLevelIdParam>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| handle_socket(socket, state, params))
+    let exists = state
+        .loader
+        .clone()
+        .exists(&loader::path_with_game(&params.game_id))
+        .await;
+    if exists {
+        ws.on_upgrade(|socket| handle_socket(socket, state, params))
+    } else {
+        StatusCode::NOT_FOUND.into_response()
+    }
 }
 
 async fn handle_socket(ws: WebSocket, state: AppState, params: GameLevelIdParam) {

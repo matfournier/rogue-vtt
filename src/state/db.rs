@@ -1,10 +1,10 @@
-use serde_json;
-use std::path::Path;
-use tokio::fs::OpenOptions;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-
 use crate::domain::game::DTOState;
 use crate::VecState;
+use serde_json;
+use std::path::Path;
+use tokio::fs;
+use tokio::fs::OpenOptions;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 pub async fn save(gs: &VecState) {
     let game = gs.id.clone();
@@ -31,8 +31,17 @@ pub fn game_to_path(game_id: &str) -> String {
     format!("{root}/{game_id}.json")
 }
 
+pub async fn exists(path: &str) -> bool {
+    let attr = fs::metadata(path).await;
+    match attr {
+        Ok(_) => true,
+        Err(_) => false,
+    }
+}
+
+// todo make this all safter.
 pub async fn load_json(path: &str) -> Option<DTOState> {
-    let is_present = Path::new(&path.clone()).exists();
+    let is_present = exists(path).await;
     if is_present {
         let mut file = OpenOptions::new().read(true).open(path).await.unwrap();
         let mut buffer = Vec::new();

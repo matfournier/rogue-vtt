@@ -2,10 +2,10 @@ use crate::domain::event::Event;
 use crate::domain::event::Msg;
 use crate::domain::game::GameState;
 use crate::event::GameEvent;
+use crate::event::InternalEvent;
 use crate::state::memory::Msg::Game;
 use crate::Loader;
 use std::collections::HashMap;
-use tokio::task::spawn_blocking;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -224,36 +224,45 @@ impl Dispatcher {
                     println!("state store got a message!");
                     ()
                 }
-                Msg::Internal { event: _ } => {
+                Msg::Internal { event } => {
                     println!("state store got an internal message! started saving!");
 
-                    let res = futures::stream::iter(self.game_events.drain().map(
-                        |(game_id, queue)| async move {
-                            if queue.len() != 0 {
-                                // load the file from disk
-                                let path = crate::loader::path_with_game(&game_id);
+                    match event {
+                        InternalEvent::Persist => {
+                            let res = futures::stream::iter(self.game_events.drain().map(
+                                |(game_id, queue)| async move {
+                                    if queue.len() != 0 {
+                                        // load the file from disk
+                                        let path = crate::loader::path_with_game(&game_id);
 
-                                // todo error handling
-                                let mut game = crate::state::db::load_rust(&path).await.unwrap();
+                                        // todo error handling
+                                        let mut game =
+                                            crate::state::db::load_rust(&path).await.unwrap();
 
-                                // then iterate over the queue and update the game
-                                queue.into_iter().for_each(|msg| match msg.data {
-                                    Event::TilePlaced { x, y, tileset, idx } => {
-                                        game.addTile(x, y, tileset, idx)
+                                        // then iterate over the queue and update the game
+                                        queue.into_iter().for_each(|msg| game.update_with(&msg));
+                                        crate::state::db::save(&game).await;
+                                    } else {
+                                        ()
                                     }
-                                    _ => (),
-                                });
-                                crate::state::db::save(&game).await;
-                            } else {
-                                ()
-                            }
-                        },
-                    ))
-                    .buffer_unordered(4);
+                                },
+                            ))
+                            .buffer_unordered(4);
 
-                    res.collect::<Vec<_>>().await;
+                            res.collect::<Vec<_>>().await;
 
-                    println!("finished saving!");
+                            println!("finished saving!");
+
+                            // TODO here should check the number of subscribers
+                            // if it is zero delete it from both maps
+
+                            // for replaying state... make a multistat event and send it to clients
+                            // clients need to store their initial state in order for people to replay
+                            // will need a new event for them to update their initial state too
+                            // e.g. after things get saved.
+                        }
+                        _ => (),
+                    }
                 }
             }
         }

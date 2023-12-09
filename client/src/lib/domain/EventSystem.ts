@@ -98,7 +98,7 @@ export class LocalEventSystem implements EventSystem {
                 if (a.tileset === 0) {
                     this.map.addDungeon(a.x, a.y, a.idx);
                 } else {
-                    this.map.addFeature(a.x, a.x, a.idx);
+                    this.map.addFeature(a.x, a.y, a.idx);
                 }
                 break;
             case "Fill":

@@ -401,7 +401,7 @@
 		<!-- <EntityPicker {entities} /> -->
 	</Modal>
 
-	<p>Game ID: ${gameId}</p>
+	<p>Game ID: {gameId}</p>
 {/if}
 
 <style>

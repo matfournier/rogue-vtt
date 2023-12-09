@@ -1,3 +1,5 @@
+use std::ops::RangeBounds;
+
 use super::game::{DTOState, GameState};
 
 use crate::domain::game::Entity;
@@ -12,6 +14,18 @@ pub struct Bounds {
     xx: u16,
     y: u16,
     yy: u16,
+}
+
+impl Bounds {
+    pub fn vec(&self) -> Vec<(u16, u16)> {
+        let mut v: Vec<(u16, u16)> = Vec::new();
+        for x in self.x..=self.xx {
+            for y in self.y..=self.yy {
+                v.push((x, y));
+            }
+        }
+        v
+    }
 }
 
 pub enum Msg {
@@ -91,12 +105,5 @@ pub enum InternalEvent {
     //  check last time something was updated
     //    delete if older than 120 minutes ?
     Persist,
-}
-
-// https://users.rust-lang.org/t/axum-within-the-standard-chat-example-how-would-you-implement-multiple-chat-rooms/82519/2
-// chat room example
-// also https://github.com/tokio-rs/axum/blob/main/examples/chat/src/main.rs
-
-pub fn update(event: &GameEvent, state: &mut DTOState) {
-    todo!();
+    MulityEvent { events: Vec<GameEvent> },
 }

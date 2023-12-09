@@ -12,22 +12,7 @@ use std::ops::Deref;
 use std::str::FromStr;
 use uuid::Uuid;
 
-// #[derive(Clone, Debug, Default, PartialEq, Serialize)]
-// pub struct InitMap {
-//     kind: i32,
-//     xy: (i32, i32),
-//     description: String,
-// }
-
-// impl InitMap {
-//     pub fn default(id: String, description: String) -> InitMap {
-//         InitMap {
-//             kind: 9, // seems wrong?
-//             xy: (100, 150),
-//             description: String,
-//         }
-//     }
-// }
+use super::event::GameEvent;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
@@ -105,9 +90,16 @@ impl Level<Vec<Option<u16>>> {
         }
     }
 
-    pub fn remove(&mut self, x: u16, y: u16) {
+    pub fn remove(&mut self, x: u16, y: u16, tileset: u16) {
         if let Some(idx) = self.pointToIdx(&x, &y) {
-            self.tiles[idx as usize] = None
+            if tileset == 0 {
+                self.tiles[idx as usize] = None
+            } else if tileset == 1 {
+                self.features[idx as usize] = None
+            } else {
+                self.tiles[idx as usize] = None;
+                self.features[idx as usize] = None
+            }
         }
     }
 }
@@ -355,7 +347,23 @@ impl GameState<Vec<Option<u16>>> {
         self.level.add(x, y, tileset, idx)
     }
 
-    pub fn removeTile(&mut self, x: u16, y: u16) {
-        self.level.remove(x, y)
+    pub fn removeTile(&mut self, x: u16, y: u16, tileset: u16) {
+        self.level.remove(x, y, tileset)
+    }
+
+    pub fn update_with(&mut self, event: &GameEvent) {
+        match &event.data {
+            Event::TilePlaced { x, y, tileset, idx } => self.addTile(*x, *y, *tileset, *idx),
+            Event::TileRemoved { x, y, layer } => self.removeTile(*x, *y, *layer),
+            Event::Fill {
+                bounds,
+                tileset,
+                idx,
+            } => bounds
+                .vec()
+                .into_iter()
+                .for_each(|(x, y)| self.addTile(x, y, *tileset, *idx)),
+            _ => (),
+        };
     }
 }

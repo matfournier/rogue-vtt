@@ -401,9 +401,7 @@
 		<!-- <EntityPicker {entities} /> -->
 	</Modal>
 
-	<p>{serverCall}</p>
-	<button type="button" on:click={tempDoPost}>Temp Save</button>
-	<button type="button" on:click={tempDoSaveAll}>Temp Save to Disk</button>
+	<p>Game ID: ${gameId}</p>
 {/if}
 
 <style>

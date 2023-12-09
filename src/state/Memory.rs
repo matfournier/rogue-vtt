@@ -4,6 +4,7 @@ use crate::domain::game::GameState;
 use crate::event::GameEvent;
 use crate::state::memory::Msg::Game;
 use crate::Loader;
+use std::collections::HashMap;
 use tokio::task::spawn_blocking;
 
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -45,16 +46,9 @@ pub struct GameMetadata {
 
 pub struct GameChannel {
     pub tx: Arc<broadcast::Sender<String>>,
-    pub queue: Vec<GameEvent>,
     // how do we handle level changes?
     // changing level writes to disk and updates everything maybe?
     pub metadata: GameMetadata,
-}
-
-impl GameChannel {
-    pub fn put(&mut self, msg: GameEvent) {
-        self.queue.push(msg)
-    }
 }
 
 pub struct SocketConnector {
@@ -76,7 +70,6 @@ impl SocketConnector {
                 let atx = Arc::new(tx);
                 let gc = GameChannel {
                     tx: atx.clone(),
-                    queue: Vec::new(),
                     metadata: GameMetadata {
                         current_level: "todo".to_string(),
                         path: "todo".to_string(),
@@ -189,6 +182,7 @@ impl SocketConnector {
 pub struct Dispatcher {
     // GameId -> GameChannel
     state: Arc<DashMap<String, GameChannel>>,
+    game_events: HashMap<String, Vec<GameEvent>>,
     rx: Receiver<Msg>,
     loader: Arc<dyn Loader + Send + Sync>,
 }
@@ -201,6 +195,7 @@ impl Dispatcher {
     ) -> Self {
         Dispatcher {
             state: state,
+            game_events: HashMap::new(),
             rx: rx,
             loader: loader,
         }
@@ -212,8 +207,18 @@ impl Dispatcher {
                 Msg::Game { msg } => {
                     // if this deadlocks consider making two different DashMaps
                     // one for GameChannel and one for the queue
-                    if let Some(mut state) = self.state.get_mut(&msg.game_id) {
-                        state.put(msg)
+                    // if let Some(mut state) = self.state.get_mut(&msg.game_id) {
+                    //     state.put(msg)
+                    // }
+
+                    if let Some(mut _state) = self.state.get_mut(&msg.game_id) {
+                        match self.game_events.get_mut(&msg.game_id) {
+                            Some(vec) => vec.push(msg),
+                            None => {
+                                self.game_events.insert(msg.game_id.clone(), vec![msg]);
+                                ()
+                            }
+                        }
                     }
                     // dbg!(msg.data);
                     println!("state store got a message!");
@@ -221,25 +226,8 @@ impl Dispatcher {
                 }
                 Msg::Internal { event: _ } => {
                     println!("state store got an internal message! started saving!");
-                    let games = self.state.clone();
 
-                    // Would like to do this lazily but running into compiler errors
-                    // when having it all in streams, hence forcing it to vectors
-                    // this isn't going to scale well
-                    // see:
-                    // https://github.com/rust-lang/rust/issues/102211#issuecomment-1513931928
-                    let game_states: Vec<(String, Vec<GameEvent>)> = games
-                        .iter()
-                        .map(|v| {
-                            // can we put more steam iters in here so I don't have to clone everything in memory?
-                            // borrow issues when I try.
-                            let game_id = v.key().clone(); // gameId
-                            let queue = v.value().queue.clone();
-                            (game_id, queue)
-                        })
-                        .collect();
-
-                    let res = futures::stream::iter(game_states.into_iter().map(
+                    let res = futures::stream::iter(self.game_events.drain().map(
                         |(game_id, queue)| async move {
                             if queue.len() != 0 {
                                 // load the file from disk

@@ -7,8 +7,10 @@ export class Grid {
 }
 
 export type Bounds = {
-    x: [number, number]
-    y: [number, number]
+    x: number,
+    xx: number,
+    y: number,
+    yy: number
 }
 
 export class SquareCounter {
@@ -48,7 +50,7 @@ export class SquareCounter {
         const ymin = Math.min(this.minY, this.maxY);
         const ymax = Math.max(this.minY, this.maxY);
 
-        return { x: [xmin, xmax], y: [ymin, ymax] }
+        return { x: xmin, xx: xmax, y: ymin, yy: ymax }
     }
 
     tiles(): Array<[number, number]> {

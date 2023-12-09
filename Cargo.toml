@@ -13,7 +13,7 @@ serde_json = "1"
 serde_repr = "0.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tower-http = { version = "0.4.0", features = ["cors"] }
+tower-http = { version = "0.4.0", features = ["cors","compression-gzip"] }
 uuid = {version = "1.4.1", features = [
     "v4",                # Lets you generate random UUIDs
     "serde"          # Use a faster (but still sufficiently random) RNG
@@ -21,3 +21,4 @@ uuid = {version = "1.4.1", features = [
 dashmap = "5.5.3"
 anyhow = "1.0.75"
 futures = "0.3.29"
+async-trait = "0.1.74"

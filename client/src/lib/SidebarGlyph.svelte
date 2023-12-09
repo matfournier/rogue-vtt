@@ -1,8 +1,7 @@
 <script>
     import { onDestroy } from "svelte";
-    import { onMount } from "svelte";
     import { entityEventStore } from "./stores/UI";
-    import { ActionType, EventType, UActionType } from "./game/Interaction";
+    import { EventType, UActionType } from "./game/Interaction";
 
     // the name is updated whenever the prop value changes...
     export let entity;
@@ -23,7 +22,7 @@
             {
                 type: EventType.GAME,
                 action: {
-                    kind: ActionType.RemoveToken,
+                    type: "RemoveToken",
                     entity: entity,
                     xy: xy,
                 },

@@ -1,6 +1,13 @@
+use crate::domain::event::Event;
+use crate::domain::event::Msg;
 use crate::domain::game::GameState;
-use crate::domain::message::Message;
-use crate::domain::{self, game};
+use crate::event::GameEvent;
+use crate::state::memory::Msg::Game;
+use crate::Loader;
+use std::collections::HashMap;
+use tokio::task::spawn_blocking;
+
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use axum::Json;
 use dashmap::DashMap;
@@ -8,101 +15,254 @@ use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::mpsc::Receiver;
 
-pub type VecState = GameState<Vec<Option<u8>>>;
+use std::thread;
 
-pub struct MemoryReceiver {
-    state: Arc<DashMap<String, VecState>>,
-    rx: Receiver<Message>,
+use crate::domain::game::DTOState;
+use tokio::sync::broadcast;
+use tokio::sync::mpsc::Sender;
+
+use axum::extract::ws::{Message, WebSocket};
+
+use futures::future::TryFutureExt;
+use futures::stream;
+use futures::{sink::SinkExt, stream::StreamExt};
+
+pub type VecState = GameState<Vec<Option<u16>>>;
+
+// idea: we keep the last ? 1 ? 2 ? 3 minutes of events
+// we have a tokio.interval that sends an event to sink everything that needs to be sunk (e.g. queue is not empty)
+// to storage (it does not call the method directly).  It also deletes the queue + checks if tx is empty and deletes the key if so
+// problem: how to handle when someone connects + we are deleting queue at the same time?
+//  someone connects -> gets object + queue but I think we have a race condition?
+//  also what about events when they are joining that they might miss? another race condition
+//    - we could dispatch all events to clients with timestamps, and they could filter the ones they don't need when someone joins?
+//    - since every event would have a state with a timestamp maybe?   IMHO the timestamp should come from the server?
+
+pub struct GameMetadata {
+    pub current_level: String,
+    pub path: String,
+    pub last_save: Option<i64>,
 }
-impl MemoryReceiver {
-    pub fn make(rx: Receiver<Message>, d: Arc<DashMap<String, VecState>>) -> Self {
-        MemoryReceiver { state: d, rx: rx }
-    }
+
+pub struct GameChannel {
+    pub tx: Arc<broadcast::Sender<String>>,
+    // how do we handle level changes?
+    // changing level writes to disk and updates everything maybe?
+    pub metadata: GameMetadata,
 }
 
-impl MemoryReceiver {
-    pub async fn start(&mut self) {
-        while let Some(message) = self.rx.recv().await {
-            println!("Recieved a save message!");
-            match message {
-                Message::EntireGame { game } => {
-                    let _ = dbg!(game.clone());
-                    let s = self.state.clone();
-                    let _ = s.insert(game.id.clone(), game);
+pub struct SocketConnector {
+    pub state: Arc<DashMap<String, GameChannel>>,
+    pub loader: Arc<dyn Loader + Send + Sync>,
+    pub sender: Arc<Sender<Msg>>,
+}
 
-                    // self.add(&lvl.id.clone(), lvl);
+impl SocketConnector {
+    pub async fn connect(&self, game_id: &str, socket: WebSocket, user: &str) {
+        let s = self.state.clone();
+        // todo make sure the game already exists otherwise fail.
+        println!("CONNECTING");
+        let game = s.get(game_id);
+        let broadcast_tx = match game {
+            Some(g) => g.tx.clone(),
+            None => {
+                let (tx, _rx) = broadcast::channel(150);
+                let atx = Arc::new(tx);
+                let gc = GameChannel {
+                    tx: atx.clone(),
+                    metadata: GameMetadata {
+                        current_level: "todo".to_string(),
+                        path: "todo".to_string(),
+                        last_save: None,
+                    },
+                };
+                s.insert(game_id.to_string(), gc);
+                atx.clone()
+            }
+        };
+
+        let (mut sender, mut receiver) = socket.split();
+
+        let mut rx = broadcast_tx.subscribe();
+
+        // Now send the "joined" message to all subscribers.
+        let zzz = Event::TextMessage {
+            user: "server".to_string(),
+            msg: format!("UNKNOWN joined."),
+        };
+
+        let msg = serde_json::to_string(&zzz).unwrap();
+        tracing::debug!("{msg}");
+        let _ = broadcast_tx.send(msg);
+
+        // Spawn the first task that will receive broadcast messages and send text
+        // messages over the websocket to our client.
+        let mut send_task = tokio::spawn(async move {
+            while let Ok(msg) = rx.recv().await {
+                // In any websocket error, break loop.
+                if sender.send(Message::Text(msg)).await.is_err() {
+                    break;
                 }
-                Message::TriggerSave { game_id, level_id } => {
-                    let s = self.state.clone();
-                    let existing_game = s.get(&game_id);
-                    dbg!(game_id.clone());
-                    if let Some(game) = existing_game {
-                        crate::state::db::save(&game).await
+            }
+        });
+
+        // Clone things we want to pass (move) to the receiving task.
+        let tx = broadcast_tx.clone();
+        // let name = username.clone();
+
+        // Spawn a task that takes messages from the websocket,
+        // deserializes the event and dispatches it to every other connected websocket
+        // janky error handling TODO: add in proper logging
+
+        let gtid: String = game_id.to_string();
+        let sender = self.sender.clone();
+        let mut recv_task = tokio::spawn(async move {
+            while let Some(Ok(Message::Text(text))) = receiver.next().await {
+                dbg!(text.clone());
+                match serde_json::from_str::<Event>(&text) {
+                    Ok(v) => {
+                        // I wonder if this should go in it's own thread?
+                        // weird when I tried to spawn a thread to do this get tons
+                        // of ownership issues on gtid and sender
+                        let msg = Game {
+                            msg: GameEvent {
+                                data: v,
+                                game_id: gtid.clone(),
+                                user: None,
+                                level: None,
+                            },
+                        };
+                        let socket_msg = match sender.try_send(msg) {
+                            Ok(_) => text,
+                            Err(_) => "ERROR: could not send message to server for state storage"
+                                .to_string(),
+                        };
+
+                        let _ = tx.send(socket_msg);
+                    }
+                    Err(_) => {
+                        println!("something went wrong with");
+                        dbg!(text);
+                        println!("above---^");
                     }
                 }
-                _ => (),
             }
+        });
+
+        // If any one of the tasks run to completion, we abort the other.
+        tokio::select! {
+            _ = (&mut send_task) => {
+                recv_task.abort();
+                println!("send_task abort!");
+                println!("count: {}", broadcast_tx.receiver_count());
+            }, // . here add a print statement, curuous if we can use this + receiver_count to clean out our map later
+            _ = (&mut recv_task) => {
+                send_task.abort();
+                println!("recv_task abort!");
+                println!("count: {}", broadcast_tx.receiver_count());
+            }
+        };
+
+        // Send "user left" message (similar to "joined" above).
+        // let msg = format!("{username} left.");
+        // tracing::debug!("{msg}");
+        // let _ = state.tx.send(msg);
+
+        // Remove username from map so new clients can take it again.
+        // state.user_set.lock().unwrap().remove(&username);
+        println!("websocket connected!")
+    }
+}
+
+// if we wanted to increase parallism we could do make N of these
+// and do some hashcode -> N
+// Map<Int, Dispatcher> that is deterministic on GameId
+// that way we would have many channels at once
+// for now assume single threaded
+pub struct Dispatcher {
+    // GameId -> GameChannel
+    state: Arc<DashMap<String, GameChannel>>,
+    game_events: HashMap<String, Vec<GameEvent>>,
+    rx: Receiver<Msg>,
+    loader: Arc<dyn Loader + Send + Sync>,
+}
+
+impl Dispatcher {
+    pub fn make(
+        rx: Receiver<Msg>,
+        loader: Arc<dyn Loader + Send + Sync>,
+        state: Arc<DashMap<String, GameChannel>>,
+    ) -> Self {
+        Dispatcher {
+            state: state,
+            game_events: HashMap::new(),
+            rx: rx,
+            loader: loader,
         }
     }
-}
 
-// look into scheduling a save to disk at a regular interval
+    pub async fn start(&mut self) {
+        while let Some(msg_container) = self.rx.recv().await {
+            match msg_container {
+                Msg::Game { msg } => {
+                    // if this deadlocks consider making two different DashMaps
+                    // one for GameChannel and one for the queue
+                    // if let Some(mut state) = self.state.get_mut(&msg.game_id) {
+                    //     state.put(msg)
+                    // }
 
-// let mut interval_timer = tokio::time::interval(chrono::Duration::days(1).to_std().unwrap());
-// loop {
-//     // Wait for the next interval tick
-//     interval_timer.tick().await;
-//     tokio::spawn(async { do_my_task().await; }); // For async task
-//     tokio::task::spawn_blocking(|| do_my_task()); // For blocking task
-// }
-pub struct MemoryHandler<T> {
-    state: Arc<DashMap<String, T>>,
-}
+                    if let Some(mut _state) = self.state.get_mut(&msg.game_id) {
+                        match self.game_events.get_mut(&msg.game_id) {
+                            Some(vec) => vec.push(msg),
+                            None => {
+                                self.game_events.insert(msg.game_id.clone(), vec![msg]);
+                                ()
+                            }
+                        }
+                    }
+                    // dbg!(msg.data);
+                    println!("state store got a message!");
+                    ()
+                }
+                Msg::Internal { event: _ } => {
+                    println!("state store got an internal message! started saving!");
 
-impl<T> MemoryHandler<T>
-where
-    T: Clone + Serialize,
-{
-    pub fn make(d: Arc<DashMap<String, T>>) -> Self {
-        MemoryHandler { state: d }
-    }
-    fn add(&self, key: &str, element: T) {
-        let w = self.state.clone();
-        w.insert(key.to_string(), element);
-    }
+                    let res = futures::stream::iter(self.game_events.drain().map(
+                        |(game_id, queue)| async move {
+                            if queue.len() != 0 {
+                                // load the file from disk
+                                let path = crate::loader::path_with_game(&game_id);
 
-    fn get_json(&self, key: &str) -> Option<Json<T>> {
-        let w = self.state.clone();
-        w.get(key).map(|x| Json(x.clone()))
-    }
-}
+                                // todo error handling
+                                let mut game = crate::state::db::load_rust(&path).await.unwrap();
 
-impl MemoryHandler<VecState> {
-    pub fn create_game(&self, description: &str, xy: &(u32, u32)) -> VecState {
-        let gamestate = domain::game::GameState::make(description.to_string(), *xy);
-        // TODO: write to durable store here
-        // .     also check if it already exists
-        let game_id = &gamestate.id.clone();
-        self.add(&gamestate.id.clone(), gamestate.clone());
-        dbg!(game_id.clone());
-        gamestate
-    }
-    // need to refactor how I store levels for a game, a second map maybe?
-    pub async fn get_game_json(&self, game_id: &str, level_id: &str) -> Option<String> {
-        println!("here!");
-        match self.get_json(game_id) {
-            Some(game) => Some(game.toJson()),
-            None => {
-                let maybe_game = crate::state::db::load(game_id, level_id).await;
-                if let Some(game) = maybe_game {
-                    self.add(&game.id.clone(), game.clone());
-                    Some(game.clone().toJson())
-                } else {
-                    None
+                                // then iterate over the queue and update the game
+                                queue.into_iter().for_each(|msg| match msg.data {
+                                    Event::TilePlaced { x, y, tileset, idx } => {
+                                        game.addTile(x, y, tileset, idx)
+                                    }
+                                    _ => (),
+                                });
+                                crate::state::db::save(&game).await;
+                            } else {
+                                ()
+                            }
+                        },
+                    ))
+                    .buffer_unordered(4);
+
+                    res.collect::<Vec<_>>().await;
+
+                    println!("finished saving!");
                 }
             }
         }
     }
-    // TODO: loading a level within an existing game
-    // data repr. is all wrong for this.
+}
+
+fn get_epoch_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_millis()
 }

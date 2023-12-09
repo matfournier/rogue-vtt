@@ -1,6 +1,13 @@
 mod domain;
 mod state;
 
+use crate::state::loader;
+use crate::state::loader::Loader;
+use crate::state::loader::LocalLoader;
+use crate::state::memory::GameChannel;
+use std::time::Duration;
+use tokio::{task, time};
+
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
@@ -13,16 +20,19 @@ use axum::{
     Router,
 };
 use dashmap::DashMap;
+use state::memory::SocketConnector;
+use tower_http::compression::CompressionLayer;
 
 use crate::state::memory::VecState;
 use domain::{
+    event,
     game::{DTOState, GameState},
-    message,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use serde::{Deserialize, Serialize};
-use state::memory::MemoryHandler;
-use state::memory::MemoryReceiver;
+// use state::memory::MemoryHandler;
+// use state::memory::MemoryReceiver;
+use state::memory::Dispatcher;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -35,9 +45,9 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
 struct AppState {
-    state_tx: Sender<message::Message>,
-    game_state: Arc<MemoryHandler<VecState>>,
-    tx: broadcast::Sender<String>,
+    state_tx: Arc<Sender<event::Msg>>,
+    connector: Arc<SocketConnector>,
+    loader: Arc<dyn Loader + Send + Sync>,
 }
 
 #[derive(Deserialize)]
@@ -50,8 +60,8 @@ struct CreateGameParam {
     description: String,
     user: String,
     mode: String, // dungeon, world
-    x: u32,
-    y: u32,
+    x: u16,
+    y: u16,
 }
 
 #[derive(Deserialize)]
@@ -81,26 +91,31 @@ async fn main() {
         .init();
 
     // build our mpsc channel for processing messages
-    let (state_tx, state_rx) = mpsc::channel::<message::Message>(100);
+    let (state_tx, state_rx) = mpsc::channel::<event::Msg>(1000);
 
     // spawn a thread to listen
 
-    let d: Arc<DashMap<String, VecState>> = Arc::new(DashMap::new());
+    let loader: Arc<dyn Loader + Send + Sync> = Arc::new(LocalLoader);
 
-    let memory_handler = MemoryHandler::make(d.clone());
+    let state: Arc<DashMap<String, GameChannel>> = Arc::new(DashMap::new());
+    let mut dispatcher = Dispatcher::make(state_rx, loader.clone(), state.clone());
 
-    let mut memory_receiver = MemoryReceiver::make(state_rx, d.clone());
+    // https://stackoverflow.com/questions/76015781/could-not-prove-that-closure-is-send maybe
 
-    tokio::spawn(async move {
-        memory_receiver.start().await;
+    let _ = tokio::spawn(async move {
+        dispatcher.start().await;
     });
 
-    let (tx, _rx) = broadcast::channel(100);
+    let arc_state_tx = Arc::new(state_tx);
 
     let state = AppState {
-        state_tx: state_tx,
-        game_state: Arc::new(memory_handler),
-        tx: tx,
+        state_tx: arc_state_tx.clone(),
+        connector: Arc::new(SocketConnector {
+            state: state.clone(),
+            loader: loader.clone(),
+            sender: arc_state_tx.clone(),
+        }),
+        loader: loader.clone(),
     };
 
     let cors = CorsLayer::new()
@@ -114,14 +129,27 @@ async fn main() {
     let app = Router::new()
         .route("/", get(show_hello))
         // .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
-        // .route("/load", get(load_map)) // remove this eventually once you get login flow working
-        // .route("/load/:map_id", get(load_specific_map))
-        .route("/save", post(save_game))
+        // .route("/save", post(save_game))
         .route("/create_game", post(create_game))
         .route("/load_game/:game_id", get(load_game))
-        .route("/save_game_level", post(save_game_level))
+        // .route("/save_game_level", post(save_game_level))
+        .route("/websocket", get(websocket_handler))
         .with_state(state)
+        .layer(CompressionLayer::new())
         .layer(cors);
+
+    let _ = task::spawn(async move {
+        let mut interval = time::interval(Duration::from_millis(60000));
+        loop {
+            interval.tick().await;
+            let _ = arc_state_tx
+                .clone()
+                .send(event::Msg::Internal {
+                    event: event::InternalEvent::Persist,
+                })
+                .await;
+        }
+    });
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -145,24 +173,11 @@ async fn show_hello() -> Response {
     Json(hello).into_response()
 }
 
-// async fn init_map() -> Json<domain::Game::InitMap> {
-//     let map = domain::Game::InitMap::default("SomeIdHere".to_string());
-//     Json(map)
-// }
-
-async fn load_map() -> Json<VecState> {
-    let gamestate = domain::game::GameState::make("Some Description".to_string(), (250, 250));
-    Json(gamestate)
-}
-
 async fn load_game(State(state): State<AppState>, Path(id): Path<String>) -> Response {
-    let zz = Arc::clone(&state.game_state);
-
-    // todo: needs the specific level to load as well
-    let resp = zz.get_game_json(&id, "dummy_value_fix_me").await;
-
+    let loader = state.loader.clone();
+    let resp = loader.get_for_json(loader::path_with_game(&id)).await;
     match resp {
-        Some(game) => game.into_response(),
+        Some(game) => serde_json::to_string(&game).unwrap().into_response(),
         None => StatusCode::NOT_FOUND.into_response(),
     }
 }
@@ -170,154 +185,64 @@ async fn create_game(
     State(state): State<AppState>,
     Query(params): Query<CreateGameParam>,
 ) -> Response {
-    let tt = state.game_state.clone();
+    let loader = state.loader.clone();
     match params.validate() {
         Ok(params) => {
-            let r = tokio::task::spawn(async move {
-                tt.create_game(&params.description, &(params.x, params.y))
-            })
-            .await;
-            match r {
-                Ok(r) => Json(r).into_response(),
-                Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            }
+            // create & save the game
+            // add to the Dispatcher
+
+            //     pub fn create_game(&self, description: &str, xy: &(u32, u32)) -> VecState {
+            //         let gamestate = domain::game::GameState::make(description.to_string(), *xy);
+            //         // TODO: write to durable store here
+            //         // .     also check if it already exists
+            //         let game_id = &gamestate.id.clone();
+            //         self.add(&gamestate.id.clone(), gamestate.clone());
+            //         dbg!(game_id.clone());
+            //         gamestate
+            //     }
+            let game_state =
+                domain::game::GameState::make(params.description.to_string(), (params.x, params.y));
+
+            loader.save_direct(&game_state).await;
+
+            game_state.toJson().into_response()
+
+            // let r = tokio::task::spawn(async move {
+            //     tt.create_game(&params.description, &(params.x, params.y))
+            // })
+            // .await;
+            // match r {
+            //     Ok(r) => Json(r).into_response(),
+            //     Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            // }
         }
         Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
     }
 }
 
-async fn save_game(State(state): State<AppState>, Json(game): Json<DTOState>) -> Response {
-    let s = state.clone();
-    let game_id = game.id.clone();
-    // TODO -> change this to be a direct save
-    // probably still in it's own thread
-    tokio::spawn(async move {
-        s.state_tx
-            .clone()
-            .send(message::Message::EntireGame {
-                game: game.toRust(),
-            })
-            .await
-            .unwrap()
-    })
-    .await
-    .unwrap();
-
-    StatusCode::OK.into_response()
-}
-
-async fn save_game_level(
-    State(state): State<AppState>,
-    Json(game_lvl): Json<GameLevelIdParam>,
-) -> Response {
-    let s = state.clone();
-    tokio::spawn(async move {
-        let _ = s
-            .state_tx
-            .clone()
-            .send(message::Message::TriggerSave {
-                game_id: game_lvl.game_id,
-                level_id: game_lvl.level_id,
-            })
-            .await;
-    })
-    .await;
-
-    StatusCode::OK.into_response()
-}
-
-// Websocket stuff
+// Websocket stuff: note needs to get the room from the gameId
+// if the game doesn't exist then reject, should only connect valid games
 async fn websocket_handler(
     ws: WebSocketUpgrade,
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
+    Query(params): Query<GameLevelIdParam>,
 ) -> impl IntoResponse {
-    ws.on_upgrade(|socket| websocket(socket, state))
-}
-
-// This function deals with a single websocket connection, i.e., a single
-// connected client / user, for which we will spawn two independent tasks (for
-// receiving / sending chat messages).
-async fn websocket(stream: WebSocket, state: Arc<AppState>) {
-    // By splitting, we can send and receive at the same time.
-    let (mut sender, mut receiver) = stream.split();
-
-    // Username gets set in the receive loop, if it's valid.
-    let mut username = String::new();
-    // Loop until a text message is found.
-    while let Some(Ok(message)) = receiver.next().await {
-        if let Message::Text(name) = message {
-            // If username that is sent by client is not taken, fill username string.
-            // check_username(&state, &mut username, &name);
-
-            // // If not empty we want to quit the loop else we want to quit function.
-            // if !username.is_empty() {
-            //     break;
-            // } else {
-            //     // Only send our client that username is taken.
-            //     let _ = sender
-            //         .send(Message::Text(String::from("Username already taken.")))
-            //         .await;
-
-            //     return;
-            // }
-            println!("message!")
-        }
+    let exists = state
+        .loader
+        .clone()
+        .exists(&loader::path_with_game(&params.game_id))
+        .await;
+    if exists {
+        ws.on_upgrade(|socket| handle_socket(socket, state, params))
+    } else {
+        StatusCode::NOT_FOUND.into_response()
     }
-
-    // We subscribe *before* sending the "joined" message, so that we will also
-    // display it to our client.
-    let mut rx = state.tx.subscribe();
-
-    // Now send the "joined" message to all subscribers.
-    let msg = format!("{username} joined.");
-    tracing::debug!("{msg}");
-    let _ = state.tx.send(msg);
-
-    // Spawn the first task that will receive broadcast messages and send text
-    // messages over the websocket to our client.
-    let mut send_task = tokio::spawn(async move {
-        while let Ok(msg) = rx.recv().await {
-            // In any websocket error, break loop.
-            if sender.send(Message::Text(msg)).await.is_err() {
-                break;
-            }
-        }
-    });
-
-    // Clone things we want to pass (move) to the receiving task.
-    let tx = state.tx.clone();
-    let name = username.clone();
-
-    // Spawn a task that takes messages from the websocket, prepends the user
-    // name, and sends them to all broadcast subscribers.
-    let mut recv_task = tokio::spawn(async move {
-        while let Some(Ok(Message::Text(text))) = receiver.next().await {
-            // Add username before message.
-            let _ = tx.send(format!("{name}: {text}"));
-        }
-    });
-
-    // If any one of the tasks run to completion, we abort the other.
-    tokio::select! {
-        _ = (&mut send_task) => recv_task.abort(),
-        _ = (&mut recv_task) => send_task.abort(),
-    };
-
-    // Send "user left" message (similar to "joined" above).
-    let msg = format!("{username} left.");
-    tracing::debug!("{msg}");
-    let _ = state.tx.send(msg);
-
-    // Remove username from map so new clients can take it again.
-    // state.user_set.lock().unwrap().remove(&username);
 }
 
-// fn check_username(state: &AppState, string: &mut String, name: &str) {
-//     let mut user_set = state.user_set.lock().unwrap();
-
-//     if !user_set.contains(name) {
-//         user_set.insert(name.to_owned());
-
-//         string.push_str(name);
-//     }
-// }
+async fn handle_socket(ws: WebSocket, state: AppState, params: GameLevelIdParam) {
+    state
+        .connector
+        .clone()
+        .connect(&params.game_id, ws, "todo")
+        .await
+}

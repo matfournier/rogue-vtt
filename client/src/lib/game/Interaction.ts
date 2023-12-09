@@ -11,20 +11,6 @@ export enum EventType {
     GAME
 }
 
-export enum ActionType {
-    TilePlaced,
-    TileRemoved,
-    Fill,
-    Clear,
-    AddToken,
-    // TokenDescription,
-    RemoveToken,
-    RenameToken,
-    MoveToken,
-    Init,
-    Load,
-}
-
 export enum UActionType {
     Reset,
     IgnoreKeyboard,
@@ -34,7 +20,7 @@ export enum UActionType {
     ChangeInteraction,
     PlaceToken,
     Ignore,
-    MoveEntityStart
+    MoveEntityStart,
 }
 
 export enum InteractionType {
@@ -43,71 +29,58 @@ export enum InteractionType {
     Place
 }
 
-// todo.
-export type LoadAction = {
-    xy: [number, number]
-}
-
 export type TilePlacedAction = {
-    kind: ActionType.TilePlaced
-    xy: [number, number]
+    type: "TilePlaced"
+    x: number,
+    y: number,
     tileset: number // 0 for dungeon, 1 for feature 
     idx: number
 }
 
 export type TileRemovedAction = {
-    kind: ActionType.TileRemoved
-    xy: [number, number]
+    type: "TileRemoved"
+    x: number,
+    y: number,
     layer: number // 0 for dungeon, 1 for feature, 2 for all 
 }
 
 export type FillAction = {
-    kind: ActionType.Fill
-    bounds: Bounds
-    tileset: number // 0 for dungeon, 1 for feature
+    type: "Fill"
+    bounds: Bounds,
+    tileset: number, // 0 for dungeon, 1 for feature
     idx: number
 }
 
 export type ClearAction = {
-    kind: ActionType.Clear
-    bounds: Bounds
+    type: "Clear",
+    bounds: Bounds,
     layer: number // 0 for dungeon, 1 for feature, 2 for all 
 }
 
 export type AddTokenAction = {
-    kind: ActionType.AddToken
-    entity: Entity,
+    type: "AddToken",
+    entity: Entity
 }
 
-
-// We will want some way to update an entity description
-// cross that bridge when it comes 
-// export type TokenDescriptionAction = {
-//     kind: ActionType.TokenDescription
-//     side: EntityType
-//     token: string
-//     desc: string
-// }
-
 export type RemoveTokenAction = {
-    kind: ActionType.RemoveToken
+    type: "RemoveToken"
     entity: Entity
     xy?: [number, number]
 }
 
 export type MoveTokenAction = {
-    kind: ActionType.MoveToken
+    type: "MoveToken"
     entity: Entity
     from: [number, number]
     to: [number, number]
 }
 
-// Only generated server side
-export type InitAction = {
-    kind: ActionType.Init
-    xy: [number, number]
-    id: String
-}
+// // Only generated server side
+// export type InitAction = {
+//     kind: ActionType.Init
+//     xy: [number, number]
+//     id: String
+// }
 
 // export type Tile = {
 //     x: number,
@@ -131,15 +104,17 @@ export type InitAction = {
 
 // // }
 
-export function toInitAction(from: any): InitAction {
-    return from as InitAction
-}
+export type TextMessageAction = {
+    type: "TextMessage",
+    user: String,
+    msg: String,
 
+}
 
 // TODO change default tile action 
 
 export type Action = TilePlacedAction | TileRemovedAction | FillAction |
-    ClearAction | AddTokenAction | RemoveTokenAction | MoveTokenAction | InitAction
+    ClearAction | AddTokenAction | RemoveTokenAction | MoveTokenAction | TextMessageAction
 
 
 export type ResetUAction = {
@@ -317,20 +292,32 @@ export class DrawHandler implements InteractionHandler {
             let bounds = this.clickBounds.bounds();
             if (mode.minor === "DRAW") {
                 this.mouseMode.reset();
-                return new Array({
-                    type: EventType.GAME, action: {
-                        kind: ActionType.Fill,
-                        bounds: bounds,
-                        tileset: this.getTileLayer(),
-                        idx: this.selectedTile.idx
-                    }
-                })
+                if (bounds.x === bounds.xx && bounds.y === bounds.yy) {
+                    return new Array({
+                        type: EventType.GAME, action: {
+                            type: "TilePlaced",
+                            x: bounds.x,
+                            y: bounds.y,
+                            tileset: this.getTileLayer(),
+                            idx: this.selectedTile.idx
+                        }
+                    })
+                } else {
+                    return new Array({
+                        type: EventType.GAME, action: {
+                            type: "Fill",
+                            bounds: bounds,
+                            tileset: this.getTileLayer(),
+                            idx: this.selectedTile.idx
+                        }
+                    })
+                }
                 // return a bunch of create tiles events 
             } else if (mode.minor === "CLEAR" || mode.minor === "CLEARALL") {
                 this.mouseMode.reset();
                 return new Array({
                     type: EventType.GAME, action: {
-                        kind: ActionType.Clear,
+                        type: "Clear",
                         bounds: bounds,
                         layer: 2
                     }
@@ -394,10 +381,10 @@ export class DrawHandler implements InteractionHandler {
             let bounds = this.clickBounds.bounds();
             context.globalAlpha = 0.25;
             context.fillRect(
-                (bounds.x[0] - this.camera.leftX) * 24,
-                (bounds.y[0] - this.camera.topY) * 24,
-                (bounds.x[1] - this.camera.leftX) * 24 + 24 - (bounds.x[0] - this.camera.leftX) * 24,
-                (bounds.y[1] - this.camera.topY) * 24 + 24 - (bounds.y[0] - this.camera.topY) * 24
+                (bounds.x - this.camera.leftX) * 24,
+                (bounds.y - this.camera.topY) * 24,
+                (bounds.xx - this.camera.leftX) * 24 + 24 - (bounds.x - this.camera.leftX) * 24,
+                (bounds.yy - this.camera.topY) * 24 + 24 - (bounds.y - this.camera.topY) * 24
             );
             context.fillStyle = pattern;
             context.globalAlpha = 1;
@@ -436,7 +423,7 @@ export class MoveHandler implements InteractionHandler {
         return new Array({
             type: EventType.GAME,
             action: {
-                kind: ActionType.MoveToken,
+                type: "MoveToken",
                 entity: this.state.entity,
                 from: this.state.xy,
                 to: xy

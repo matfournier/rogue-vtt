@@ -1,15 +1,14 @@
 <script>
 	import { onDestroy } from "svelte";
 	import { onMount } from "svelte";
-	import { Grid, SquareCounter } from "../domain/Grid";
+	import { Grid } from "../domain/Grid";
 	import Toolbar from "../Toolbar.svelte";
-	import { MapState, dungeonMapFrom } from "../domain/DungeonMap";
-	import TilePicker from "../popups/TilePicker.svelte";
-	import EntityPicker from "../popups/EntityPicker.svelte";
+	import { dungeonMapFrom } from "../domain/DungeonMap";
 	import { modal } from "../stores/UI";
 	import EntityForm from "../popups/EntityForm.svelte";
 	import Palette from "../popups/Palette.svelte";
 	import { bind } from "../Modal.svelte";
+	import websocketStore from "svelte-websocket-store";
 
 	import Modal from "../Modal.svelte";
 	import { selectedTileStore } from "../stores/UI";
@@ -23,10 +22,9 @@
 		PlaceHandler,
 		UActionType,
 		ViewHandler,
-		toInitAction,
 	} from "./Interaction";
 	import { Camera } from "./Camera";
-	import { LocalEventSystem } from "../domain/EventSystem";
+	import { LocalEventSystem, RemoteEventSystem } from "../domain/EventSystem";
 	import Sidebar from "../Sidebar.svelte";
 	import { entitiesToJson, parseGamestate } from "../transfer/Transfer";
 
@@ -78,7 +76,7 @@
 			0,
 			0,
 			tileSize,
-			tileSize
+			tileSize,
 		);
 		context.save;
 		return tiledBackgroundCanvas;
@@ -97,31 +95,35 @@
 			cameraDimensions[0],
 			cameraDimensions[1],
 			mapSize[0],
-			mapSize[1]
+			mapSize[1],
 		);
 		viewHandlerFactory("RESET");
 
 		map = dungeonMapFrom(gs.level, tileSheet, camera);
 
-		// let map = new MapState(
-		// 	mapSize[0],
-		// 	mapSize[1],
-		// 	tileSheet,
-		// 	camera,
-		// 	"someId",
-		// 	"someDescription"
-		// );
+		let gameContext = {
+			gameId: gs.id,
+			levelId: gs.level.id,
+			userId: "TODO",
+		};
+
 		entities = new EntityState(camera);
 		gs.entities.npcs.forEach((e) => entities.addEntity(e));
 		gs.entities.players.forEach((e) => entities.addEntity(e));
 		gameId = gs.id;
-		es = new LocalEventSystem(map, entities, camera);
 		// TODO: this default canvas stuff should move somewhere else.
 		let defaultTile = tileSheet.dungeon.tiles[101];
 		context = canvas.getContext("2d");
 		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
 		context.fillStyle = pattern;
 		context.font = "18pt Monospace";
+		let websocket = getWebsocketStore();
+		es = new RemoteEventSystem(
+			new LocalEventSystem(map, entities, camera),
+			websocket,
+			context,
+			gameContext,
+		);
 		handleSize();
 		stores = {
 			selected: selectedTileStore.subscribe((value) => {
@@ -204,7 +206,7 @@
 					height: 6 * 24,
 					icons: tileSheet.icon,
 					sheetName: "dungeon",
-				})
+				}),
 			);
 		} else if (e.action.kind === UActionType.PopupFeature) {
 			modal.set(
@@ -213,7 +215,7 @@
 					height: 2 * 24,
 					icons: tileSheet.icon,
 					sheetName: "feature",
-				})
+				}),
 			);
 		} else if (e.action.kind === UActionType.PlaceToken) {
 			mapFocus = false;
@@ -225,14 +227,14 @@
 						mapFocus = true;
 						draw();
 					},
-				})
+				}),
 			);
 		} else if (e.action.kind === UActionType.MoveEntityStart) {
 			interfaceHandler = new MoveHandler(
 				camera,
 				tileSheet.icon,
 				selectedMapTile,
-				e.action
+				e.action,
 			);
 		} else if (e.action.kind === UActionType.Reset) {
 			viewHandlerFactory("RESET");
@@ -260,7 +262,7 @@
 			interfaceHandler = new ViewHandler(
 				camera,
 				tileSheet.icon,
-				selectedMapTile
+				selectedMapTile,
 			);
 			mode = "VIEW";
 		} else if (s === "DRAW") {
@@ -268,14 +270,14 @@
 				paletteSelected,
 				camera,
 				tileSheet.icon,
-				selectedMapTile
+				selectedMapTile,
 			);
 			mode = "DRAW";
 		} else if (s === "PLACE") {
 			interfaceHandler = new PlaceHandler(
 				camera,
 				tileSheet.icon,
-				selectedMapTile
+				selectedMapTile,
 			);
 			mode = "PLACE TOKEN";
 		}
@@ -337,6 +339,16 @@
 		const status = await res.status;
 		console.log(status);
 		console.log("here");
+	}
+
+	function getWebsocketStore() {
+		let params = `ws://localhost:3000/websocket?game_id=${gameId}&level_id=todo`;
+		// receive JSON from server (push)
+		// websocket.subscribe((value) => {
+		// 	console.log("received message: " + JSON.stringify(value));
+		// });
+
+		return websocketStore(params, {}, []);
 	}
 </script>
 

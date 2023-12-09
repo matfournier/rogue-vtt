@@ -2,7 +2,7 @@
     import { getContext, onDestroy } from "svelte";
     import { EntityType } from "../domain/EntityRenderer";
     import { entityEventStore } from "../stores/UI";
-    import { ActionType, EventType } from "../game/Interaction";
+    import { EventType } from "../game/Interaction";
     const { close } = getContext("simple-modal");
 
     export let xy;
@@ -32,7 +32,7 @@
             };
 
             let entityAction = {
-                kind: ActionType.AddToken,
+                type: "AddToken",
                 entity: entity,
             };
 

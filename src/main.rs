@@ -5,6 +5,8 @@ use crate::state::loader;
 use crate::state::loader::Loader;
 use crate::state::loader::LocalLoader;
 use crate::state::memory::GameChannel;
+use std::time::Duration;
+use tokio::{task, time};
 
 use axum::{
     extract::{
@@ -58,8 +60,8 @@ struct CreateGameParam {
     description: String,
     user: String,
     mode: String, // dungeon, world
-    x: u32,
-    y: u32,
+    x: u16,
+    y: u16,
 }
 
 #[derive(Deserialize)]
@@ -98,6 +100,8 @@ async fn main() {
     let state: Arc<DashMap<String, GameChannel>> = Arc::new(DashMap::new());
     let mut dispatcher = Dispatcher::make(state_rx, loader.clone(), state.clone());
 
+    // https://stackoverflow.com/questions/76015781/could-not-prove-that-closure-is-send maybe
+
     let _ = tokio::spawn(async move {
         dispatcher.start().await;
     });
@@ -133,6 +137,19 @@ async fn main() {
         .with_state(state)
         .layer(CompressionLayer::new())
         .layer(cors);
+
+    let _ = task::spawn(async move {
+        let mut interval = time::interval(Duration::from_millis(60000));
+        loop {
+            interval.tick().await;
+            let _ = arc_state_tx
+                .clone()
+                .send(event::Msg::Internal {
+                    event: event::InternalEvent::Persist,
+                })
+                .await;
+        }
+    });
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));

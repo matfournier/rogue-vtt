@@ -1,4 +1,4 @@
-use super::game::GameState;
+use super::game::{DTOState, GameState};
 
 use crate::domain::game::Entity;
 use crate::VecState;
@@ -6,7 +6,7 @@ use axum::extract::ws::WebSocket;
 use serde::{Deserialize, Serialize};
 
 // Todo implement into_iter() for this type
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Bounds {
     x: u16,
     xx: u16,
@@ -19,7 +19,7 @@ pub enum Msg {
     Internal { event: InternalEvent },
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GameEvent {
     pub data: Event,
     pub game_id: String,
@@ -28,7 +28,7 @@ pub struct GameEvent {
 }
 // idea that everything would get sent through the pipe to the handler
 // can we send TriggerSave there too? Or should that be inside of the hanlder itself (probably?)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum Event {
     EntireGame {
@@ -81,8 +81,22 @@ pub enum InternalEvent {
     //     stream: &WebSocket,
     //     game_id: String,
     // },
+
+    // when you hit this:
+    //  load map from remote
+    //  update map with contents of the buffer
+    //  empty the bufer
+    //  check if the number of connections in the broadcast channel is 0
+    //    delete from the map if true
+    //  check last time something was updated
+    //    delete if older than 120 minutes ?
+    Persist,
 }
 
 // https://users.rust-lang.org/t/axum-within-the-standard-chat-example-how-would-you-implement-multiple-chat-rooms/82519/2
 // chat room example
 // also https://github.com/tokio-rs/axum/blob/main/examples/chat/src/main.rs
+
+pub fn update(event: &GameEvent, state: &mut DTOState) {
+    todo!();
+}

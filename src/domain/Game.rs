@@ -31,9 +31,9 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
-    x: u32,
-    y: u32,
-    idx: u8,
+    x: u16,
+    y: u16,
+    idx: u16,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize_repr, Deserialize_repr)]
@@ -64,13 +64,13 @@ pub struct Level<T> {
     pub kind: LevelType,
     pub description: String,
     pub id: Id,
-    pub dimension: (u32, u32),
+    pub dimension: (u16, u16),
     pub tiles: T,
     pub features: T,
 }
 
 impl<T> Level<T> {
-    pub fn pointToIdx(&self, x: &u32, y: &u32) -> Option<u32> {
+    pub fn pointToIdx(&self, x: &u16, y: &u16) -> Option<u32> {
         if *x > self.dimension.0 || *y > self.dimension.1 {
             None
         } else {
@@ -78,16 +78,37 @@ impl<T> Level<T> {
         }
     }
 
-    pub fn idxToPoint(&self, idx: u32) -> (u32, u32) {
-        let x = u32::from(idx) % self.dimension.1;
-        let y = u32::from(idx) / self.dimension.1;
-        (x, y)
+    pub fn idxToPoint(&self, idx: u32) -> (u16, u16) {
+        let x = idx % self.dimension.1 as u32;
+        let y = idx / self.dimension.1 as u32;
+        (x as u16, y as u16)
 
         // idxToCoords(idx: number): [number, number] {
         //     let x = idx % this.width
         //     let y = Math.floor(idx / this.width)
         //     return [x, y]
         // }
+    }
+}
+
+// if let Some(pos) = self.level.pointToIdx(&t.x, &t.y) {
+//     dungeon[pos as usize] = Some(t.idx.clone());
+// }
+impl Level<Vec<Option<u16>>> {
+    pub fn add(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {
+        if let Some(pos) = self.pointToIdx(&x, &y) {
+            if tileset == 0 {
+                self.tiles[pos as usize] = Some(idx)
+            } else {
+                self.features[pos as usize] = Some(idx)
+            }
+        }
+    }
+
+    pub fn remove(&mut self, x: u16, y: u16) {
+        if let Some(idx) = self.pointToIdx(&x, &y) {
+            self.tiles[idx as usize] = None
+        }
     }
 }
 
@@ -196,10 +217,10 @@ pub struct GameState<T> {
 pub type DTOState = GameState<Vec<Tile>>;
 
 impl GameState<Vec<Tile>> {
-    pub fn toRust(&self) -> GameState<Vec<Option<u8>>> {
-        let size: u32 = self.level.dimension.0 * self.level.dimension.1;
-        let mut dungeon: Vec<Option<u8>> = Vec::with_capacity(size.clone() as usize);
-        let mut features: Vec<Option<u8>> = Vec::with_capacity(size.clone() as usize);
+    pub fn toRust(&self) -> GameState<Vec<Option<u16>>> {
+        let size: u32 = self.level.dimension.0 as u32 * self.level.dimension.1 as u32;
+        let mut dungeon: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
+        let mut features: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
         for i in 0..size {
             dungeon.push(None);
             features.push(None);
@@ -235,8 +256,10 @@ impl GameState<Vec<Tile>> {
     }
 }
 
-impl GameState<Vec<Option<u8>>> {
-    pub fn make(description: String, dimension: (u32, u32)) -> Self {
+// I wish I had Map<string, tile> but interop w/ typescript is a pain
+// this seems VERY wasteful but who knows
+impl GameState<Vec<Option<u16>>> {
+    pub fn make(description: String, dimension: (u16, u16)) -> Self {
         let mut players: HashMap<Id, Entity> = HashMap::new();
         players.insert(
             Id("one".to_string()),
@@ -327,5 +350,12 @@ impl GameState<Vec<Option<u8>>> {
         serde_json::to_string(&new_gs).unwrap()
     }
 
-    pub fn addTile(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {}
+    // TODO clean up that idx is u16 and not u8
+    pub fn addTile(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {
+        self.level.add(x, y, tileset, idx)
+    }
+
+    pub fn removeTile(&mut self, x: u16, y: u16) {
+        self.level.remove(x, y)
+    }
 }

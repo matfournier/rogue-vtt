@@ -4,6 +4,7 @@ use crate::domain::game::GameState;
 use crate::event::GameEvent;
 use crate::state::memory::Msg::Game;
 use crate::Loader;
+use tokio::task::spawn_blocking;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -13,15 +14,19 @@ use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::mpsc::Receiver;
 
+use std::thread;
+
 use crate::domain::game::DTOState;
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 
 use axum::extract::ws::{Message, WebSocket};
 
+use futures::future::TryFutureExt;
+use futures::stream;
 use futures::{sink::SinkExt, stream::StreamExt};
 
-pub type VecState = GameState<Vec<Option<u8>>>;
+pub type VecState = GameState<Vec<Option<u16>>>;
 
 // idea: we keep the last ? 1 ? 2 ? 3 minutes of events
 // we have a tokio.interval that sends an event to sink everything that needs to be sunk (e.g. queue is not empty)
@@ -40,10 +45,16 @@ pub struct GameMetadata {
 
 pub struct GameChannel {
     pub tx: Arc<broadcast::Sender<String>>,
-    pub queue: Vec<Msg>,
+    pub queue: Vec<GameEvent>,
     // how do we handle level changes?
     // changing level writes to disk and updates everything maybe?
     pub metadata: GameMetadata,
+}
+
+impl GameChannel {
+    pub fn put(&mut self, msg: GameEvent) {
+        self.queue.push(msg)
+    }
 }
 
 pub struct SocketConnector {
@@ -196,21 +207,67 @@ impl Dispatcher {
     }
 
     pub async fn start(&mut self) {
-        while let Some(msg) = self.rx.recv().await {
-            match msg {
+        while let Some(msg_container) = self.rx.recv().await {
+            match msg_container {
                 Msg::Game { msg } => {
-                    dbg!(msg.data);
+                    // if this deadlocks consider making two different DashMaps
+                    // one for GameChannel and one for the queue
+                    if let Some(mut state) = self.state.get_mut(&msg.game_id) {
+                        state.put(msg)
+                    }
+                    // dbg!(msg.data);
                     println!("state store got a message!");
                     ()
                 }
+                Msg::Internal { event: _ } => {
+                    println!("state store got an internal message! started saving!");
+                    let games = self.state.clone();
 
-                _ => (),
+                    // Would like to do this lazily but running into compiler errors
+                    // when having it all in streams, hence forcing it to vectors
+                    // this isn't going to scale well
+                    // see:
+                    // https://github.com/rust-lang/rust/issues/102211#issuecomment-1513931928
+                    let game_states: Vec<(String, Vec<GameEvent>)> = games
+                        .iter()
+                        .map(|v| {
+                            // can we put more steam iters in here so I don't have to clone everything in memory?
+                            // borrow issues when I try.
+                            let game_id = v.key().clone(); // gameId
+                            let queue = v.value().queue.clone();
+                            (game_id, queue)
+                        })
+                        .collect();
+
+                    let res = futures::stream::iter(game_states.into_iter().map(
+                        |(game_id, queue)| async move {
+                            if queue.len() != 0 {
+                                // load the file from disk
+                                let path = crate::loader::path_with_game(&game_id);
+
+                                // todo error handling
+                                let mut game = crate::state::db::load_rust(&path).await.unwrap();
+
+                                // then iterate over the queue and update the game
+                                queue.into_iter().for_each(|msg| match msg.data {
+                                    Event::TilePlaced { x, y, tileset, idx } => {
+                                        game.addTile(x, y, tileset, idx)
+                                    }
+                                    _ => (),
+                                });
+                                crate::state::db::save(&game).await;
+                            } else {
+                                ()
+                            }
+                        },
+                    ))
+                    .buffer_unordered(4);
+
+                    res.collect::<Vec<_>>().await;
+
+                    println!("finished saving!");
+                }
             }
-            let ts = get_epoch_ms();
-            dbg!(ts);
-            println!("Recieved message");
-            // dbg!(msg);
-            // match message {}
         }
     }
 }

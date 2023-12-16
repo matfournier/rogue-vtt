@@ -114,11 +114,18 @@ pub enum EntityType {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Entity {
     kind: EntityType,
-    x: i32,
-    y: i32,
+    x: u32,
+    y: u32,
     character: String,
     id: Id,
     description: String,
+}
+
+impl Entity {
+    pub fn move_entity(&mut self, x: u32, y: u32) {
+        self.x = x;
+        self.y = y;
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -163,6 +170,48 @@ impl Entities {
         EntityVec {
             players: self.players.values().into_iter().cloned().collect(),
             npcs: self.players.values().into_iter().cloned().collect(),
+        }
+    }
+
+    pub fn remove_entity(&mut self, entity: &Entity) {
+        match entity.kind {
+            EntityType::Player => {
+                self.players.remove(&entity.id);
+            }
+            EntityType::NPC => {
+                self.npcs.remove(&entity.id);
+            }
+        }
+    }
+    pub fn add_entity(&mut self, entity: &Entity) {
+        match entity.kind {
+            EntityType::Player => {
+                self.players.insert(entity.id.clone(), entity.clone());
+            }
+            EntityType::NPC => {
+                self.npcs.insert(entity.id.clone(), entity.clone());
+            }
+        }
+    }
+
+    // this one seems really backwards to me.  If I have the entity why don't I just update it
+    // what's the point of moving it to a new place?
+    pub fn move_entity(&mut self, entity: &Entity, x: u32, y: u32) {
+        match entity.kind {
+            EntityType::Player => {
+                // there is a `get_mut` you can probably use instead
+                // there is also an and_modify to use
+                if let Some(mut e) = self.players.remove(&entity.id) {
+                    e.move_entity(x, y);
+                    self.players.insert(e.id.clone(), e);
+                }
+            }
+            EntityType::NPC => {
+                if let Some(mut e) = self.npcs.remove(&entity.id) {
+                    e.move_entity(x, y);
+                    self.npcs.insert(e.id.clone(), e);
+                }
+            }
         }
     }
 }
@@ -363,6 +412,16 @@ impl GameState<Vec<Option<u16>>> {
                 .vec()
                 .into_iter()
                 .for_each(|(x, y)| self.addTile(x, y, *tileset, *idx)),
+            &Event::Clear {
+                ref bounds,
+                ref layer,
+            } => bounds
+                .vec()
+                .into_iter()
+                .for_each(|(x, y)| self.removeTile(x, y, *layer)),
+            &Event::AddToken { ref entity } => self.entities.add_entity(entity),
+            &Event::MoveToken { ref entity, to } => self.entities.move_entity(entity, to.0, to.1),
+            &Event::RemoveToken { ref entity } => self.entities.add_entity(entity),
             _ => (),
         };
     }

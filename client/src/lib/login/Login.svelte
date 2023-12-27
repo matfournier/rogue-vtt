@@ -8,14 +8,15 @@
     let characterValue = "";
     let radio = 0;
     let error = false;
-    const root = "http://localhost:3000";
+    const host = import.meta.env.VITE_ROGUE_HOST_NAME;
+    const httpType = import.meta.env.VITE_HTTP_TYPE;
 
     async function onSubmit(e) {
         const f = parseLogin(e);
         console.log(f);
         // todo make calls to backend here and make this fn async
         if (f.kind == LoginActionType.Create) {
-            let url = `${root}/create_game?mode=${f.levelKind}&x=${f.xy[0]}&y=${f.xy[1]}&description=${f.description}&user=${f.user}`;
+            let url = `${httpType}://${host}/create_game?mode=${f.levelKind}&x=${f.xy[0]}&y=${f.xy[1]}&description=${f.description}&user=${f.user}`;
             fetch(url, { method: "POST" })
                 .then((response) => {
                     console.log(`response status: ${response.status}`);
@@ -39,7 +40,7 @@
                     });
                 });
         } else if (f.kind == LoginActionType.Load) {
-            let url = `${root}/load_game/${f.id}`;
+            let url = `${httpType}://${host}/load_game/${f.id}`;
             fetch(url)
                 .then((response) => {
                     console.log(`response status: ${response.status}`);

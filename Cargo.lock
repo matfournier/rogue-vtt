@@ -717,6 +717,7 @@ dependencies = [
  "axum",
  "dashmap",
  "futures",
+ "log",
  "serde",
  "serde_json",
  "serde_repr",

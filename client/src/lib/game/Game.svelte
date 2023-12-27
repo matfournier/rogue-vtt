@@ -39,6 +39,8 @@
 
 	export let render;
 	export let gameState;
+	export let host;
+	export let httpType;
 
 	let pattern;
 
@@ -85,6 +87,7 @@
 	onMount(() => {
 		let gs = gameState;
 		console.log(gs);
+		console.log("hereeeeee");
 		// let initAction = toInitAction(result);
 		let mapSize = gs.level.dimension;
 
@@ -310,7 +313,7 @@
 			entities: entitiesJson,
 			id: gameId,
 		};
-		const res = await fetch("http://localhost:3000/save", {
+		const res = await fetch(`${httpType}://${host}/save`, {
 			method: "POST",
 			body: JSON.stringify(gs),
 			mode: "cors", // no-cors, *cors, same-origin
@@ -327,7 +330,7 @@
 		let gsId = gameId;
 		let levelId = map.id;
 		let both = { game_id: gsId, level_id: levelId };
-		const res = await fetch("http://localhost:3000/save_game_level", {
+		const res = await fetch(`${httpType}://${host}/save_game_level`, {
 			method: "POST",
 			body: JSON.stringify(both),
 			mode: "cors", // no-cors, *cors, same-origin
@@ -342,12 +345,7 @@
 	}
 
 	function getWebsocketStore() {
-		let params = `ws://localhost:3000/websocket?game_id=${gameId}&level_id=todo`;
-		// receive JSON from server (push)
-		// websocket.subscribe((value) => {
-		// 	console.log("received message: " + JSON.stringify(value));
-		// });
-
+		let params = `ws://${host}/websocket?game_id=${gameId}&level_id=todo`;
 		return websocketStore(params, {}, []);
 	}
 </script>

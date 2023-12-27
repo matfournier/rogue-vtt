@@ -41,7 +41,13 @@ pub type VecState = GameState<Vec<Option<u16>>>;
 pub struct GameMetadata {
     pub current_level: String,
     pub path: String,
-    pub last_save: Option<i64>,
+    pub last_save: Option<u128>,
+}
+
+impl GameMetadata {
+    pub fn save(&mut self) {
+        self.last_save = Some(get_epoch_ms());
+    }
 }
 
 pub struct GameChannel {
@@ -242,14 +248,29 @@ impl Dispatcher {
                                         // then iterate over the queue and update the game
                                         queue.into_iter().for_each(|msg| game.update_with(&msg));
                                         crate::state::db::save(&game).await;
+
+                                        // cannot update the save time annoyingly so not sure how I'm going to
+                                        // get rid of OLD connections where no game action has happened in some time
+
+                                        // self.state.get_mut(&game_id).unwrap().metadata.save();
+                                        Some(game_id.to_string())
                                     } else {
-                                        ()
+                                        None
                                     }
                                 },
                             ))
                             .buffer_unordered(4);
 
-                            res.collect::<Vec<_>>().await;
+                            let games_to_update_time: Vec<Option<String>> =
+                                res.collect::<Vec<_>>().await;
+
+                            games_to_update_time.iter().for_each(|game| match game {
+                                Some(g) => {
+                                    let mut gc = self.state.get_mut(g).unwrap();
+                                    gc.metadata.save();
+                                }
+                                None => (),
+                            });
 
                             println!("finished saving!");
 
@@ -260,6 +281,38 @@ impl Dispatcher {
                             // clients need to store their initial state in order for people to replay
                             // will need a new event for them to update their initial state too
                             // e.g. after things get saved.
+                            let keys: Vec<String> = self
+                                .state
+                                .clone()
+                                .iter()
+                                .map(|r| r.key().to_string())
+                                .collect();
+
+                            println!("do I get here?");
+                            let _ = keys.into_iter().for_each(|k| {
+                                println!("{}", format!("processing {}", k.to_string()));
+                                let gc = self.state.get_mut(&k).unwrap();
+                                let tx = gc.tx.clone();
+                                let subscribers = tx.receiver_count();
+                                let last_save: u128 = match gc.metadata.last_save.clone() {
+                                    Some(v) => v,
+                                    None => 0,
+                                };
+                                dbg!(last_save);
+                                // why is this 1 and not zero?
+                                println!("{}", format!("subscriber count {}", subscribers));
+                                if subscribers <= 0 {
+                                    println!("DISCONNECTING!!!!! test");
+                                    self.state.remove(&k);
+                                };
+                                // change this to some larger value
+                                // if get_epoch_ms() - last_save > 60000 {
+                                //     println!("CLOSING DUE TO INACTIVITY!");
+                                //     // thid eson't work since broadcast channels don't have a close method
+                                //     // let mut zz = gc.rx;
+                                //     // zz.close();
+                                // };
+                            });
                         }
                         _ => (),
                     }

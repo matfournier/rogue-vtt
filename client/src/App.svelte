@@ -12,6 +12,9 @@
 	let gameState;
 	let errorText;
 
+	const host = import.meta.env.VITE_ROGUE_HOST_NAME;
+	const httpType = import.meta.env.VITE_HTTP_TYPE;
+
 	let state = 0; // 0: NoResult, 1: game load, 2: error
 	loginStateStore.subscribe((s) => {
 		if (s.kind == LoginResultType.Load) {
@@ -29,7 +32,7 @@
 <main>
 	{#if state == 1}
 		{#await promise then tileSheet}
-			<Game {tileSheet} {gameState} {render} />
+			<Game {tileSheet} {gameState} {render} {host} {httpType} />
 		{/await}
 	{:else}
 		<Login />

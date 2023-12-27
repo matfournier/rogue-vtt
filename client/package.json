@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --mode development",
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
@@ -19,6 +19,7 @@
     "vite": "^4.3.9"
   },
   "dependencies": {
+    "dotenv": "^16.3.1",
     "fp-ts": "^2.16.1",
     "svelte-websocket-store": "^1.1.33"
   }

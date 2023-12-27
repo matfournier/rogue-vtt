@@ -1,5 +1,3 @@
-// https://dev.to/alexeagleson/how-to-set-up-a-fullstack-rust-project-with-axum-react-vite-and-shared-types-429e?
-
 use crate::event::Event;
 use serde::Deserialize;
 use serde::Serialize;
@@ -28,22 +26,6 @@ pub enum LevelType {
     Overland = 1,
 }
 
-pub enum TileType {
-    Dungeon,
-    Feature,
-    // All, // not sure about this one!
-}
-
-// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-// pub struct Level {
-//     pub kind: LevelType,
-//     pub description: String,
-//     pub id: Id,
-//     pub dimension: (i32, i32),
-//     pub tiles: HashMap<(i32, i32), Tile>, // this is really poor for removing tiles imho, need to change this into a Map
-//     pub features: HashMap<(i32, i32), Tile>, // this is really poor for removing tiles imho, need to change this into a Map
-// }
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Level<T> {
     pub kind: LevelType,
@@ -55,7 +37,7 @@ pub struct Level<T> {
 }
 
 impl<T> Level<T> {
-    pub fn pointToIdx(&self, x: &u16, y: &u16) -> Option<u32> {
+    pub fn point_to_idx(&self, x: &u16, y: &u16) -> Option<u32> {
         if *x > self.dimension.0 || *y > self.dimension.1 {
             None
         } else {
@@ -63,7 +45,7 @@ impl<T> Level<T> {
         }
     }
 
-    pub fn idxToPoint(&self, idx: u32) -> (u16, u16) {
+    pub fn idx_to_point(&self, idx: u32) -> (u16, u16) {
         let x = idx % self.dimension.1 as u32;
         let y = idx / self.dimension.1 as u32;
         (x as u16, y as u16)
@@ -76,12 +58,9 @@ impl<T> Level<T> {
     }
 }
 
-// if let Some(pos) = self.level.pointToIdx(&t.x, &t.y) {
-//     dungeon[pos as usize] = Some(t.idx.clone());
-// }
 impl Level<Vec<Option<u16>>> {
     pub fn add(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {
-        if let Some(pos) = self.pointToIdx(&x, &y) {
+        if let Some(pos) = self.point_to_idx(&x, &y) {
             if tileset == 0 {
                 self.tiles[pos as usize] = Some(idx)
             } else {
@@ -91,7 +70,7 @@ impl Level<Vec<Option<u16>>> {
     }
 
     pub fn remove(&mut self, x: u16, y: u16, tileset: u16) {
-        if let Some(idx) = self.pointToIdx(&x, &y) {
+        if let Some(idx) = self.point_to_idx(&x, &y) {
             if tileset == 0 {
                 self.tiles[idx as usize] = None
             } else if tileset == 1 {
@@ -258,7 +237,7 @@ pub struct GameState<T> {
 pub type DTOState = GameState<Vec<Tile>>;
 
 impl GameState<Vec<Tile>> {
-    pub fn toRust(&self) -> GameState<Vec<Option<u16>>> {
+    pub fn to_rust(&self) -> GameState<Vec<Option<u16>>> {
         let size: u32 = self.level.dimension.0 as u32 * self.level.dimension.1 as u32;
         let mut dungeon: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
         let mut features: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
@@ -269,13 +248,13 @@ impl GameState<Vec<Tile>> {
         // now iterate through each level and feature filling in what you need to on this array
         // and remake the GameState object
         self.level.tiles.clone().into_iter().for_each(|t| {
-            if let Some(pos) = self.level.pointToIdx(&t.x, &t.y) {
+            if let Some(pos) = self.level.point_to_idx(&t.x, &t.y) {
                 dungeon[pos as usize] = Some(t.idx.clone());
             }
         });
 
         self.level.features.clone().into_iter().for_each(|t| {
-            if let Some(pos) = self.level.pointToIdx(&t.x, &t.y) {
+            if let Some(pos) = self.level.point_to_idx(&t.x, &t.y) {
                 features[pos as usize] = Some(t.idx.clone());
             }
         });
@@ -333,7 +312,7 @@ impl GameState<Vec<Option<u16>>> {
         }
     }
 
-    pub fn toJson(&self) -> String {
+    pub fn to_json(&self) -> String {
         // here convert to GameState<Vec<Tile>> perhaps ?
         // and then conver that to JSON?
         let mut level_dungeon: Vec<Tile> = Vec::new();
@@ -346,7 +325,7 @@ impl GameState<Vec<Option<u16>>> {
             .enumerate()
             .for_each(|(i, tile)| match tile {
                 Some(tile_idx) => {
-                    let pt = self.level.idxToPoint(i as u32);
+                    let pt = self.level.idx_to_point(i as u32);
                     level_dungeon.push(Tile {
                         x: pt.0,
                         y: pt.1,
@@ -363,7 +342,7 @@ impl GameState<Vec<Option<u16>>> {
             .enumerate()
             .for_each(|(i, tile)| match tile {
                 Some(tile_idx) => {
-                    let pt = self.level.idxToPoint(i as u32);
+                    let pt = self.level.idx_to_point(i as u32);
                     level_features.push(Tile {
                         x: pt.0,
                         y: pt.1,
@@ -392,18 +371,18 @@ impl GameState<Vec<Option<u16>>> {
     }
 
     // TODO clean up that idx is u16 and not u8
-    pub fn addTile(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {
+    pub fn add_tile(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {
         self.level.add(x, y, tileset, idx)
     }
 
-    pub fn removeTile(&mut self, x: u16, y: u16, tileset: u16) {
+    pub fn remove_tile(&mut self, x: u16, y: u16, tileset: u16) {
         self.level.remove(x, y, tileset)
     }
 
     pub fn update_with(&mut self, event: &GameEvent) {
         match &event.data {
-            Event::TilePlaced { x, y, tileset, idx } => self.addTile(*x, *y, *tileset, *idx),
-            Event::TileRemoved { x, y, layer } => self.removeTile(*x, *y, *layer),
+            Event::TilePlaced { x, y, tileset, idx } => self.add_tile(*x, *y, *tileset, *idx),
+            Event::TileRemoved { x, y, layer } => self.remove_tile(*x, *y, *layer),
             Event::Fill {
                 bounds,
                 tileset,
@@ -411,14 +390,14 @@ impl GameState<Vec<Option<u16>>> {
             } => bounds
                 .vec()
                 .into_iter()
-                .for_each(|(x, y)| self.addTile(x, y, *tileset, *idx)),
+                .for_each(|(x, y)| self.add_tile(x, y, *tileset, *idx)),
             &Event::Clear {
                 ref bounds,
                 ref layer,
             } => bounds
                 .vec()
                 .into_iter()
-                .for_each(|(x, y)| self.removeTile(x, y, *layer)),
+                .for_each(|(x, y)| self.remove_tile(x, y, *layer)),
             &Event::AddToken { ref entity } => self.entities.add_entity(entity),
             &Event::MoveToken { ref entity, to } => self.entities.move_entity(entity, to.0, to.1),
             &Event::RemoveToken { ref entity } => self.entities.add_entity(entity),

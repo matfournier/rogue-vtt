@@ -1,10 +1,5 @@
-use std::ops::RangeBounds;
-
-use super::game::{DTOState, GameState};
-
 use crate::domain::game::Entity;
 use crate::VecState;
-use axum::extract::ws::WebSocket;
 use serde::{Deserialize, Serialize};
 
 // Todo implement into_iter() for this type
@@ -105,5 +100,5 @@ pub enum InternalEvent {
     //  check last time something was updated
     //    delete if older than 120 minutes ?
     Persist,
-    MulityEvent { events: Vec<GameEvent> },
+    // MulityEvent { events: Vec<GameEvent> },
 }

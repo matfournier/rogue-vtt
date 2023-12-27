@@ -5,42 +5,34 @@ use crate::state::loader;
 use crate::state::loader::Loader;
 use crate::state::loader::LocalLoader;
 use crate::state::memory::GameChannel;
-use std::time::Duration;
-use tokio::{task, time};
-
+use axum::routing::get_service;
 use axum::{
     extract::{
-        ws::{Message, WebSocket, WebSocketUpgrade},
-        Form, Json, Path, Query, State,
+        ws::{WebSocket, WebSocketUpgrade},
+        Json, Path, Query, State,
     },
     http::{Method, StatusCode},
-    response::{Html, IntoResponse, Response},
+    response::{IntoResponse, Response},
     routing::get,
     routing::post,
     Router,
 };
 use dashmap::DashMap;
 use state::memory::SocketConnector;
+use std::time::Duration;
+use tokio::{task, time};
 use tower_http::compression::CompressionLayer;
 
 use crate::state::memory::VecState;
-use domain::{
-    event,
-    game::{DTOState, GameState},
-};
-use futures::{sink::SinkExt, stream::StreamExt};
+use domain::event;
 use serde::{Deserialize, Serialize};
-// use state::memory::MemoryHandler;
-// use state::memory::MemoryReceiver;
 use state::memory::Dispatcher;
-use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
-use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
@@ -72,7 +64,7 @@ struct GameLevelIdParam {
 
 impl CreateGameParam {
     fn validate(self) -> Result<CreateGameParam, String> {
-        if self.x >= 0 && self.x <= 1000 && self.y >= 0 && self.y <= 1000 {
+        if self.x <= 1000 && self.y <= 1000 {
             Ok(self)
         } else {
             Err("Out of bounds".to_string())
@@ -134,6 +126,11 @@ async fn main() {
         .route("/load_game/:game_id", get(load_game))
         // .route("/save_game_level", post(save_game_level))
         .route("/websocket", get(websocket_handler))
+        .fallback(
+            get_service(ServeDir::new("./client/dist")).handle_error(|_| async move {
+                (StatusCode::INTERNAL_SERVER_ERROR, "internal server error")
+            }),
+        )
         .with_state(state)
         .layer(CompressionLayer::new())
         .layer(cors);
@@ -205,7 +202,7 @@ async fn create_game(
 
             loader.save_direct(&game_state).await;
 
-            game_state.toJson().into_response()
+            game_state.to_json().into_response()
 
             // let r = tokio::task::spawn(async move {
             //     tt.create_game(&params.description, &(params.x, params.y))

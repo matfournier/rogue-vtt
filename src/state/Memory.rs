@@ -29,15 +29,6 @@ use futures::{sink::SinkExt, stream::StreamExt};
 
 pub type VecState = GameState<Vec<Option<u16>>>;
 
-// idea: we keep the last ? 1 ? 2 ? 3 minutes of events
-// we have a tokio.interval that sends an event to sink everything that needs to be sunk (e.g. queue is not empty)
-// to storage (it does not call the method directly).  It also deletes the queue + checks if tx is empty and deletes the key if so
-// problem: how to handle when someone connects + we are deleting queue at the same time?
-//  someone connects -> gets object + queue but I think we have a race condition?
-//  also what about events when they are joining that they might miss? another race condition
-//    - we could dispatch all events to clients with timestamps, and they could filter the ones they don't need when someone joins?
-//    - since every event would have a state with a timestamp maybe?   IMHO the timestamp should come from the server?
-
 pub struct GameMetadata {
     pub current_level: String,
     pub path: String,

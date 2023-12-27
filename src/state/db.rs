@@ -1,7 +1,6 @@
 use crate::domain::game::DTOState;
 use crate::VecState;
 use serde_json;
-use std::path::Path;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -18,7 +17,7 @@ pub async fn save(gs: &VecState) {
         .open(path)
         .await
         .unwrap();
-    file.write_all(gs.toJson().as_bytes()).await;
+    file.write_all(gs.to_json().as_bytes()).await;
 }
 
 pub fn game_level_to_path(game_id: &str, level_id: &str) -> String {
@@ -60,5 +59,5 @@ pub async fn load_json(path: &str) -> Option<DTOState> {
 
 pub async fn load_rust(path: &str) -> Option<VecState> {
     let maybe_state = load_json(path).await;
-    maybe_state.map(|gs| gs.toRust())
+    maybe_state.map(|gs| gs.to_rust())
 }

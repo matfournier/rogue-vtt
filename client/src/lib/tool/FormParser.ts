@@ -1,6 +1,6 @@
-import * as E from "fp-ts/Either";
-import { pipe } from "fp-ts/function";
-import type { Either } from "fp-ts/Either";
+import * as E from "fp-ts/lib/Either";
+import { pipe } from "fp-ts/lib/function";
+import type { Either } from "fp-ts/lib/Either";
 import { LoginActionType } from "../login/loginstate";
 import type { LoadGame, LoginAction } from "../login/loginstate"
 import { LevelKind } from "../transfer/Transfer";

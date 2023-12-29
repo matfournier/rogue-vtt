@@ -241,7 +241,7 @@ impl GameState<Vec<Tile>> {
         let size: u32 = self.level.dimension.0 as u32 * self.level.dimension.1 as u32;
         let mut dungeon: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
         let mut features: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
-        for i in 0..size {
+        for _i in 0..size {
             dungeon.push(None);
             features.push(None);
         }

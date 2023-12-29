@@ -9,22 +9,22 @@ use std::collections::HashMap;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use axum::Json;
+
 use dashmap::DashMap;
-use serde::Serialize;
+
 use std::sync::Arc;
 use tokio::sync::mpsc::Receiver;
 
-use std::thread;
 
-use crate::domain::game::DTOState;
+
+
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 
 use axum::extract::ws::{Message, WebSocket};
 
-use futures::future::TryFutureExt;
-use futures::stream;
+
+
 use futures::{sink::SinkExt, stream::StreamExt};
 
 pub type VecState = GameState<Vec<Option<u16>>>;
@@ -55,7 +55,7 @@ pub struct SocketConnector {
 }
 
 impl SocketConnector {
-    pub async fn connect(&self, game_id: &str, socket: WebSocket, user: &str) {
+    pub async fn connect(&self, game_id: &str, socket: WebSocket, _user: &str) {
         let s = self.state.clone();
         // todo make sure the game already exists otherwise fail.
         println!("CONNECTING");

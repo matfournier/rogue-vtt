@@ -1,5 +1,5 @@
 import * as E from "fp-ts/Either";
-import { pipe } from "fp-ts/Function";
+import { pipe } from "fp-ts/function";
 import type { Either } from "fp-ts/Either";
 import { LoginActionType } from "../login/loginstate";
 import type { LoadGame, LoginAction } from "../login/loginstate"

@@ -119,12 +119,8 @@ async fn main() {
 
     // build our application with some routes
     let app = Router::new()
-        .route("/", get(show_hello))
-        // .route("/init", get(init_map)) // todo update this to take x,y params. ID will be generated server side.
-        // .route("/save", post(save_game))
         .route("/create_game", post(create_game))
         .route("/load_game/:game_id", get(load_game))
-        // .route("/save_game_level", post(save_game_level))
         .route("/websocket", get(websocket_handler))
         .fallback(
             get_service(ServeDir::new("./client/dist")).handle_error(|_| async move {

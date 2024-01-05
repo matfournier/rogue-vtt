@@ -18,6 +18,7 @@ use axum::{
     Router,
 };
 use dashmap::DashMap;
+use env_logger::Env;
 use state::memory::SocketConnector;
 use std::time::Duration;
 use tokio::{task, time};
@@ -74,13 +75,15 @@ impl CreateGameParam {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "example_form=debug".into()),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    // tracing_subscriber::registry()
+    //     .with(
+    //         tracing_subscriber::EnvFilter::try_from_default_env()
+    //             .unwrap_or_else(|_| "example_form=debug".into()),
+    //     )
+    //     .with(tracing_subscriber::fmt::layer())
+    //     .init();
+
+    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
     // build our mpsc channel for processing messages
     let (state_tx, state_rx) = mpsc::channel::<event::Msg>(1000);
@@ -153,19 +156,6 @@ async fn main() {
         .unwrap();
 }
 
-#[derive(Serialize)]
-struct Hello {
-    name: String,
-}
-
-async fn show_hello() -> Response {
-    let hello = Hello {
-        name: String::from("world"),
-    };
-
-    Json(hello).into_response()
-}
-
 async fn load_game(State(state): State<AppState>, Path(id): Path<String>) -> Response {
     let loader = state.loader.clone();
     let resp = loader.get_for_json(loader::path_with_game(&id)).await;
@@ -181,33 +171,13 @@ async fn create_game(
     let loader = state.loader.clone();
     match params.validate() {
         Ok(params) => {
-            // create & save the game
-            // add to the Dispatcher
-
-            //     pub fn create_game(&self, description: &str, xy: &(u32, u32)) -> VecState {
-            //         let gamestate = domain::game::GameState::make(description.to_string(), *xy);
-            //         // TODO: write to durable store here
-            //         // .     also check if it already exists
-            //         let game_id = &gamestate.id.clone();
-            //         self.add(&gamestate.id.clone(), gamestate.clone());
-            //         dbg!(game_id.clone());
-            //         gamestate
-            //     }
             let game_state =
                 domain::game::GameState::make(params.description.to_string(), (params.x, params.y));
 
             loader.save_direct(&game_state).await;
 
+            tracing::info!("created game {:?}", &game_state.id);
             game_state.to_json().into_response()
-
-            // let r = tokio::task::spawn(async move {
-            //     tt.create_game(&params.description, &(params.x, params.y))
-            // })
-            // .await;
-            // match r {
-            //     Ok(r) => Json(r).into_response(),
-            //     Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-            // }
         }
         Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
     }

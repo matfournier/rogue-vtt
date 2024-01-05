@@ -9,21 +9,15 @@ use std::collections::HashMap;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-
 use dashmap::DashMap;
 
 use std::sync::Arc;
 use tokio::sync::mpsc::Receiver;
 
-
-
-
 use tokio::sync::broadcast;
 use tokio::sync::mpsc::Sender;
 
 use axum::extract::ws::{Message, WebSocket};
-
-
 
 use futures::{sink::SinkExt, stream::StreamExt};
 
@@ -57,8 +51,11 @@ pub struct SocketConnector {
 impl SocketConnector {
     pub async fn connect(&self, game_id: &str, socket: WebSocket, _user: &str) {
         let s = self.state.clone();
-        // todo make sure the game already exists otherwise fail.
-        println!("CONNECTING");
+        tracing::info!(
+            "connecting new user: {:?} to game_id {:?}",
+            &game_id,
+            &_user
+        );
         let game = s.get(game_id);
         let broadcast_tx = match game {
             Some(g) => g.tx.clone(),
@@ -115,7 +112,7 @@ impl SocketConnector {
         let sender = self.sender.clone();
         let mut recv_task = tokio::spawn(async move {
             while let Some(Ok(Message::Text(text))) = receiver.next().await {
-                dbg!(text.clone());
+                // dbg!(text.clone());
                 match serde_json::from_str::<Event>(&text) {
                     Ok(v) => {
                         // I wonder if this should go in it's own thread?
@@ -137,10 +134,13 @@ impl SocketConnector {
 
                         let _ = tx.send(socket_msg);
                     }
-                    Err(_) => {
-                        println!("something went wrong with");
+                    Err(e) => {
                         dbg!(text);
-                        println!("above---^");
+                        tracing::error!(
+                            "Something went wrong with {:?}, error: {:?}",
+                            gtid.clone(),
+                            &e
+                        )
                     }
                 }
             }
@@ -149,33 +149,18 @@ impl SocketConnector {
         // If any one of the tasks run to completion, we abort the other.
         tokio::select! {
             _ = (&mut send_task) => {
+                // no way to block on this which is why we see a log message of 1
                 recv_task.abort();
-                println!("send_task abort!");
-                println!("count: {}", broadcast_tx.receiver_count());
+                tracing::info!("recv_task abort for game {:?} user {:?} count: {:?}", game_id.to_string(), &_user, broadcast_tx.receiver_count());
             }, // . here add a print statement, curuous if we can use this + receiver_count to clean out our map later
             _ = (&mut recv_task) => {
                 send_task.abort();
-                println!("recv_task abort!");
-                println!("count: {}", broadcast_tx.receiver_count());
+                tracing::info!("send_task abort for game {:?} user {:?} count: {:?}", game_id.to_string(), &_user, broadcast_tx.receiver_count());
             }
         };
-
-        // Send "user left" message (similar to "joined" above).
-        // let msg = format!("{username} left.");
-        // tracing::debug!("{msg}");
-        // let _ = state.tx.send(msg);
-
-        // Remove username from map so new clients can take it again.
-        // state.user_set.lock().unwrap().remove(&username);
-        println!("websocket connected!")
     }
 }
 
-// if we wanted to increase parallism we could do make N of these
-// and do some hashcode -> N
-// Map<Int, Dispatcher> that is deterministic on GameId
-// that way we would have many channels at once
-// for now assume single threaded
 pub struct Dispatcher {
     // GameId -> GameChannel
     state: Arc<DashMap<String, GameChannel>>,
@@ -198,6 +183,9 @@ impl Dispatcher {
         }
     }
 
+    // read https://stackoverflow.com/questions/68233404/wrapper-struct-for-hashmap-mutex-rust
+    // and https://stackoverflow.com/a/65434321
+
     pub async fn start(&mut self) {
         while let Some(msg_container) = self.rx.recv().await {
             match msg_container {
@@ -218,11 +206,11 @@ impl Dispatcher {
                         }
                     }
                     // dbg!(msg.data);
-                    println!("state store got a message!");
+                    // println!("state store got a message!");
                     ()
                 }
                 Msg::Internal { event } => {
-                    println!("state store got an internal message! started saving!");
+                    tracing::info!("State store saving triggered");
 
                     match event {
                         InternalEvent::Persist => {
@@ -263,11 +251,6 @@ impl Dispatcher {
                                 None => (),
                             });
 
-                            println!("finished saving!");
-
-                            // TODO here should check the number of subscribers
-                            // if it is zero delete it from both maps
-
                             // for replaying state... make a multistat event and send it to clients
                             // clients need to store their initial state in order for people to replay
                             // will need a new event for them to update their initial state too
@@ -279,31 +262,25 @@ impl Dispatcher {
                                 .map(|r| r.key().to_string())
                                 .collect();
 
-                            println!("do I get here?");
                             let _ = keys.into_iter().for_each(|k| {
                                 println!("{}", format!("processing {}", k.to_string()));
                                 let gc = self.state.get_mut(&k).unwrap();
                                 let tx = gc.tx.clone();
                                 let subscribers = tx.receiver_count();
-                                let last_save: u128 = match gc.metadata.last_save.clone() {
-                                    Some(v) => v,
-                                    None => 0,
-                                };
-                                dbg!(last_save);
-                                // why is this 1 and not zero?
-                                println!("{}", format!("subscriber count {}", subscribers));
-                                if subscribers <= 0 {
-                                    println!("DISCONNECTING!!!!! test");
-                                    self.state.remove(&k);
-                                };
-                                // change this to some larger value
-                                // if get_epoch_ms() - last_save > 60000 {
-                                //     println!("CLOSING DUE TO INACTIVITY!");
-                                //     // thid eson't work since broadcast channels don't have a close method
-                                //     // let mut zz = gc.rx;
-                                //     // zz.close();
+                                // let last_save: u128 = match gc.metadata.last_save.clone() {
+                                //     Some(v) => v,
+                                //     None => 0,
                                 // };
+                                if subscribers <= 0 {
+                                    tracing::info!(
+                                        "Cleaning up {:?} due to zero active subscribers",
+                                        &k
+                                    );
+                                    self.state.remove(&k);
+                                    self.game_events.remove(&k);
+                                };
                             });
+                            tracing::info!("State store saving finished");
                         }
                         _ => (),
                     }

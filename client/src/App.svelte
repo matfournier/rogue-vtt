@@ -11,6 +11,7 @@
 	let screen = "login";
 	let gameState;
 	let errorText;
+	let pw;
 
 	const host = import.meta.env.VITE_ROGUE_HOST_NAME;
 	const httpType = import.meta.env.VITE_HTTP_TYPE;
@@ -20,6 +21,7 @@
 		if (s.kind == LoginResultType.Load) {
 			state = s.kind;
 			gameState = s.game;
+			pw = s.pw;
 		} else if (s.kind === LoginResultType.Error) {
 			state = s.kind;
 			errorText = s.error;
@@ -32,7 +34,7 @@
 <main>
 	{#if state == 1}
 		{#await promise then tileSheet}
-			<Game {tileSheet} {gameState} {render} {host} {httpType} />
+			<Game {tileSheet} {gameState} {render} {host} {httpType} {pw} />
 		{/await}
 	{:else}
 		<Login />

@@ -11,13 +11,16 @@ export type Create = {
     levelKind: LevelKind,
     xy: [number, number],
     description: string,
-    user: string
+    user: string,
+    pw: string,
 }
 
 
 export type LoadGame = {
     kind: LoginActionType.Load,
     id: string
+    user: string,
+    pw: string
 }
 
 export type LoginError = {
@@ -35,7 +38,8 @@ export enum LoginResultType {
 
 export type LoadGameResult = {
     kind: LoginResultType.Load,
-    game: GameState
+    game: GameState,
+    pw: string
 }
 
 export type ErrorResult = {

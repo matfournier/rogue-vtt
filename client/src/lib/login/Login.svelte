@@ -16,7 +16,7 @@
         console.log(f);
         // todo make calls to backend here and make this fn async
         if (f.kind == LoginActionType.Create) {
-            let url = `${httpType}://${host}/create_game?mode=${f.levelKind}&x=${f.xy[0]}&y=${f.xy[1]}&description=${f.description}&user=${f.user}`;
+            let url = `${httpType}://${host}/create_game?mode=${f.levelKind}&x=${f.xy[0]}&y=${f.xy[1]}&description=${f.description}&user=${f.user}&pw=${f.pw}`;
             fetch(url, { method: "POST" })
                 .then((response) => {
                     console.log(`response status: ${response.status}`);
@@ -24,8 +24,12 @@
                         return response.json(); // we get a string back
                     } else {
                         return new Promise((resolve, _) => {
-                            response.text().then((t) => {
-                                console.log(t);
+                            response.text().then((text) => {
+                                loginStateStore.set({
+                                    kind: LoginResultType.Error,
+                                    error: `ERROR CONNECTING: Code: ${response.status} error: ${text}`,
+                                });
+                                console.log("TERRIBLY WRONG");
                                 resolve();
                             });
                         });
@@ -37,10 +41,11 @@
                     loginStateStore.set({
                         kind: LoginResultType.Load,
                         game: gs,
+                        pw: f.pw,
                     });
                 });
         } else if (f.kind == LoginActionType.Load) {
-            let url = `${httpType}://${host}/load_game/${f.id}`;
+            let url = `${httpType}://${host}/load_game/${f.id}?pw=${f.pw}`;
             fetch(url)
                 .then((response) => {
                     console.log(`response status: ${response.status}`);
@@ -48,8 +53,12 @@
                         return response.json();
                     } else {
                         return new Promise((resolve, _) => {
-                            response.text().then((t) => {
-                                console.log(t);
+                            response.text().then((text) => {
+                                loginStateStore.set({
+                                    kind: LoginResultType.Error,
+                                    error: `ERROR CONNECTING: Code: ${response.status} error: ${text}`,
+                                });
+                                console.log("TERRIBLY WRONG");
                                 resolve();
                             });
                         });
@@ -61,6 +70,7 @@
                     loginStateStore.set({
                         kind: LoginResultType.Load,
                         game: gs,
+                        pw: f.pw,
                     });
                 });
         } else {
@@ -83,18 +93,29 @@
             Existing Map
         </label>
     </div>
+    <div>
+        <label for="user_name">UserName</label>
+        <input type="text" id="USERNAME" name="USERNAME" value="" />
+    </div>
     {#if radio == 1}
         <div>
-            <label for="name">ID</label>
+            <label for="name">Game ID</label>
             <input type="text" id="ID" name="ID" value="" />
+        </div>
+        <div>
+            <label for="pw">Game PW</label>
+            <input type="password" id="PW" name="PW" value="" />
         </div>
     {:else}
         <div>
             <label for="x">x</label>
             <input type="number" id="X" name="X" value="250" />
-
             <label for="x">y</label>
             <input type="number" id="Y" name="Y" value="250" />
+        </div>
+        <div>
+            <label for="pw">Game PW</label>
+            <input type="password" id="PW" name="PW" value="" />
         </div>
     {/if}
     <button type="submit">Play</button>

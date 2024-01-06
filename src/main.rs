@@ -55,12 +55,20 @@ struct CreateGameParam {
     mode: String, // dungeon, world
     x: u16,
     y: u16,
+    pw: String,
+}
+
+#[derive(Deserialize)]
+
+struct LoadGameParam {
+    pw: String,
 }
 
 #[derive(Deserialize)]
 struct GameLevelIdParam {
     game_id: String,
     level_id: String,
+    pw: String,
 }
 
 impl CreateGameParam {
@@ -156,12 +164,21 @@ async fn main() {
         .unwrap();
 }
 
-async fn load_game(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+async fn load_game(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(pw): Query<LoadGameParam>,
+) -> Response {
     let loader = state.loader.clone();
-    let resp = loader.get_for_json(loader::path_with_game(&id)).await;
-    match resp {
-        Some(game) => serde_json::to_string(&game).unwrap().into_response(),
-        None => StatusCode::NOT_FOUND.into_response(),
+    let allowed = loader.check_key(&id, &pw.pw).await;
+    if allowed {
+        let resp = loader.get_for_json(loader::path_with_game(&id)).await;
+        match resp {
+            Some(game) => serde_json::to_string(&game).unwrap().into_response(),
+            None => StatusCode::NOT_FOUND.into_response(),
+        }
+    } else {
+        StatusCode::UNAUTHORIZED.into_response()
     }
 }
 async fn create_game(
@@ -175,6 +192,7 @@ async fn create_game(
                 domain::game::GameState::make(params.description.to_string(), (params.x, params.y));
 
             loader.save_direct(&game_state).await;
+            loader.save_key(&game_state.id, &params.pw).await;
 
             tracing::info!("created game {:?}", &game_state.id);
             game_state.to_json().into_response()
@@ -193,12 +211,12 @@ async fn websocket_handler(
     let exists = state
         .loader
         .clone()
-        .exists(&loader::path_with_game(&params.game_id))
+        .check_key(&params.game_id, &params.pw)
         .await;
     if exists {
         ws.on_upgrade(|socket| handle_socket(socket, state, params))
     } else {
-        StatusCode::NOT_FOUND.into_response()
+        StatusCode::UNAUTHORIZED.into_response()
     }
 }
 

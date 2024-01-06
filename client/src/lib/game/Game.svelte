@@ -41,6 +41,7 @@
 	export let gameState;
 	export let host;
 	export let httpType;
+	export let pw;
 
 	let pattern;
 
@@ -86,9 +87,6 @@
 
 	onMount(() => {
 		let gs = gameState;
-		console.log(gs);
-		console.log("hereeeeee");
-		// let initAction = toInitAction(result);
 		let mapSize = gs.level.dimension;
 
 		console.log(mapSize);
@@ -120,7 +118,7 @@
 		pattern = context.createPattern(defaultCanvas(defaultTile), "repeat");
 		context.fillStyle = pattern;
 		context.font = "18pt Monospace";
-		let websocket = getWebsocketStore();
+		let websocket = getWebsocketStore(pw);
 		es = new RemoteEventSystem(
 			new LocalEventSystem(map, entities, camera),
 			websocket,
@@ -344,8 +342,8 @@
 		console.log("here");
 	}
 
-	function getWebsocketStore() {
-		let params = `ws://${host}/websocket?game_id=${gameId}&level_id=todo`;
+	function getWebsocketStore(pw) {
+		let params = `ws://${host}/websocket?game_id=${gameId}&level_id=todo&pw=${pw}`;
 		return websocketStore(params, {}, []);
 	}
 </script>

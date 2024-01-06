@@ -8,6 +8,9 @@ pub trait Loader {
     async fn get_for_json(&self, path: String) -> Option<GameState<Vec<Tile>>>;
     async fn save_direct(&self, state: &GameState<Vec<Option<u16>>>);
     async fn exists(&self, path: &str) -> bool;
+    async fn game_exists(&self, game_id: &str) -> bool;
+    async fn save_key(&self, game_id: &str, key: &str);
+    async fn check_key(&self, game_id: &str, key: &str) -> bool;
 }
 
 pub struct LocalLoader;
@@ -29,6 +32,18 @@ impl Loader for LocalLoader {
 
     async fn exists(&self, path: &str) -> bool {
         crate::state::db::exists(&path).await
+    }
+
+    async fn game_exists(&self, game_id: &str) -> bool {
+        crate::state::db::game_exists(game_id).await
+    }
+
+    async fn save_key(&self, game_id: &str, key: &str) {
+        crate::state::db::save_key(game_id, key).await
+    }
+
+    async fn check_key(&self, game_id: &str, key: &str) -> bool {
+        crate::state::db::check_key(game_id, key).await
     }
 }
 

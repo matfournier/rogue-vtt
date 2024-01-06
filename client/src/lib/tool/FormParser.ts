@@ -1,4 +1,5 @@
 import * as E from "fp-ts/lib/Either";
+import * as A from 'fp-ts/lib/Array'
 import { pipe } from "fp-ts/lib/function";
 import type { Either } from "fp-ts/lib/Either";
 import { LoginActionType } from "../login/loginstate";
@@ -6,6 +7,17 @@ import type { LoadGame, LoginAction } from "../login/loginstate"
 import { LevelKind } from "../transfer/Transfer";
 
 // typing a form in typescript appears to be the ninth circle of hell, wtf
+
+type NewParams = {
+    xy: [number, number],
+    user: string,
+    pw: string
+}
+
+type Params = {
+    user: string,
+    pw: string
+}
 
 export function formToObject(e: any): Either<string, any> {
     try {
@@ -70,9 +82,25 @@ function parseLoginForm(e: any): LoginAction {
         )
     }
 
+    const parseUserName = (): Either<string, string> => {
+        return pipe(getKey("USERNAME"), E.chain(nonEmpty))
+    }
+
+    const parsePassword = (): Either<string, string> => {
+        return pipe(getKey("PW"), E.chain(nonEmpty))
+    }
+
+    const parseNewParams = (): Either<string, NewParams> => {
+        return pipe(parseXY(), E.chain(xy => pipe(parseUserName(), E.chain(user => pipe(parsePassword(), E.map(pw => { return { xy: xy, pw: pw, user: user } }))))))
+    }
+
+    const parseParams = (): Either<string, Params> => {
+        return pipe(parseUserName(), E.chain(user => pipe(parsePassword(), E.map(pw => { return { pw: pw, user: user } }))))
+    }
+
     const nonEmpty = (b: string): Either<string, string> => {
         if (b == null || b == undefined || b == "") {
-            return E.left("Loading a map from an empty ID is not possible")
+            return E.left(`Required field ${b} was empty`)
         } else {
             return E.right(b)
         }
@@ -82,20 +110,19 @@ function parseLoginForm(e: any): LoginAction {
         pipe(
             getKey("ID"),
             E.chain(nonEmpty),
-            E.map(<LoadGame>(id: string) => { return { kind: LoginActionType.Load, id: id } })
+            E.chain(id => pipe(parseParams(), E.map(params => { return { kind: LoginActionType.Load, id: id, user: params.user, pw: params.pw } })))
         )
 
     const parseLoginType = (t: LoginActionType): Either<string, LoginAction> => {
         if (t == LoginActionType.Create) {
             return pipe(
-                parseXY(),
-                E.map(xy => { return { kind: LoginActionType.Create, xy: xy, description: "default", user: "default", levelKind: LevelKind.Dungeon } })
+                parseNewParams(),
+                E.map(params => { return { pw: params.pw, kind: LoginActionType.Create, xy: params.xy, description: "default", user: params.user, levelKind: LevelKind.Dungeon } })
             )
         } else {
             return parseMapId()
         }
     }
-
 
     return pipe(
         getKey("newmap"),

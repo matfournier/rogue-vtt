@@ -19,6 +19,8 @@ use axum::{
 };
 use dashmap::DashMap;
 use env_logger::Env;
+use roguevtt_server::configuration::get_configuration;
+use sqlx::PgPool;
 use state::memory::SocketConnector;
 use std::time::Duration;
 use tokio::{task, time};
@@ -92,6 +94,12 @@ async fn main() {
     //     .init();
 
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
+    let configuration = get_configuration().expect("Failed to read configuration.yaml");
+
+    let connection_pool = PgPool::connect(&configuration.database.connection_string())
+        .await
+        .expect("Failed to connect to postgres");
 
     // build our mpsc channel for processing messages
     let (state_tx, state_rx) = mpsc::channel::<event::Msg>(1000);

@@ -1,9 +1,30 @@
 use crate::domain::game::DTOState;
 use crate::VecState;
+use roguevtt_server::configuration::{self, DatabaseSettings};
 use serde_json;
+use sqlx::PgPool;
+use sqlx::Pool;
+use sqlx::Postgres;
+use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+struct DB {
+    pool: Arc<Pool<Postgres>>,
+}
+
+impl DB {
+    pub fn make(configuration: &DatabaseSettings) -> DB {
+        let connection_pool = PgPool::connect_lazy(&configuration.connection_string())
+            // .await
+            .expect("Failed to connect to postgres");
+
+        DB {
+            pool: Arc::new(connection_pool),
+        }
+    }
+}
 
 pub async fn save(gs: &VecState) {
     let game = gs.id.clone();

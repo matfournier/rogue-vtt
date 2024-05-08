@@ -278,6 +278,12 @@ impl GameState<Vec<Tile>> {
 
 // I wish I had Map<string, tile> but interop w/ typescript is a pain
 // this seems VERY wasteful but who knows
+
+// look into https://github.com/bincode-org/bincode 
+// and storing [u8] in postgres as a bytea type
+//
+// skip that use the jsonb type, sqlx supports it 
+
 impl GameState<Vec<Option<u16>>> {
     pub fn make(description: String, dimension: (u16, u16)) -> Self {
         let mut players: HashMap<Id, Entity> = HashMap::new();

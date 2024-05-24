@@ -30,7 +30,6 @@ impl DB {
 
     pub async fn save(self, gs: &GameState<Vec<Tile>>) -> Result<()> {
         // probaly want to deal with errors here
-        let conn = self.pool.acquire().await?;
         let json: String = serde_json::to_string(gs)?;
         let level_id = Uuid::parse_str(&gs.level.id.to_string()).unwrap(); // fix;
         let game_id = Uuid::parse_str(&gs.id).unwrap(); // fix ;

@@ -57,20 +57,16 @@ struct CreateGameParam {
     mode: String, // dungeon, world
     x: i16,
     y: i16,
-    pw: String,
 }
 
 #[derive(Deserialize)]
-
-struct LoadGameParam {
-    pw: String,
-}
-
-#[derive(Deserialize)]
+// struct LoadGameParam {
+//     pw: String,
+// }
+// #[derive(Deserialize)]
 struct GameLevelIdParam {
     game_id: String,
     level_id: String,
-    pw: String,
 }
 
 impl CreateGameParam {
@@ -175,10 +171,11 @@ async fn main() {
 async fn load_game(
     State(state): State<AppState>,
     Path(id): Path<String>,
-    Query(pw): Query<LoadGameParam>,
+    // Query(pw): Query<LoadGameParam>,
 ) -> Response {
     let loader = state.loader.clone();
-    let allowed = loader.check_key(&id, &pw.pw).await;
+    // let allowed = loader.check_key(&id, &pw.pw).await;
+    let allowed = true;
     if allowed {
         let resp = loader.get_for_json(loader::path_with_game(&id)).await;
         match resp {
@@ -200,7 +197,7 @@ async fn create_game(
                 domain::game::GameState::make(params.description.to_string(), (params.x, params.y));
 
             loader.save_direct(&game_state).await;
-            loader.save_key(&game_state.id, &params.pw).await;
+            // loader.save_key(&game_state.id, &params.pw).await;
 
             tracing::info!("created game {:?}", &game_state.id);
             game_state.to_json().into_response()
@@ -216,11 +213,12 @@ async fn websocket_handler(
     State(state): State<AppState>,
     Query(params): Query<GameLevelIdParam>,
 ) -> impl IntoResponse {
-    let exists = state
-        .loader
-        .clone()
-        .check_key(&params.game_id, &params.pw)
-        .await;
+    // let exists = state
+    //     .loader
+    //     .clone()
+    //     .check_key(&params.game_id, &params.pw)
+    //     .await;
+    let exists = true;
     if exists {
         ws.on_upgrade(|socket| handle_socket(socket, state, params))
     } else {

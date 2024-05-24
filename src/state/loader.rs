@@ -4,9 +4,9 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait Loader {
-    async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<u16>>>>;
+    async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<i16>>>>;
     async fn get_for_json(&self, path: String) -> Option<GameState<Vec<Tile>>>;
-    async fn save_direct(&self, state: &GameState<Vec<Option<u16>>>);
+    async fn save_direct(&self, state: &GameState<Vec<Option<i16>>>);
     async fn exists(&self, path: &str) -> bool;
     async fn game_exists(&self, game_id: &str) -> bool;
     async fn save_key(&self, game_id: &str, key: &str);
@@ -17,13 +17,13 @@ pub struct LocalLoader;
 
 #[async_trait]
 impl Loader for LocalLoader {
-    async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<u16>>>> {
+    async fn get_for_memory(&self, path: String) -> Option<GameState<Vec<Option<i16>>>> {
         crate::state::db::load_rust(&path).await
     }
     async fn get_for_json(&self, path: String) -> Option<GameState<Vec<Tile>>> {
         crate::state::db::load_json(&path).await
     }
-    async fn save_direct(&self, state: &GameState<Vec<Option<u16>>>) {
+    async fn save_direct(&self, state: &GameState<Vec<Option<i16>>>) {
         crate::state::db::save(state).await
         // probably need some state passed in to make it make sense
         // fn will load the json into memory, apply the queue, then save.

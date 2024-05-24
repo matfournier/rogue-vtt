@@ -1,17 +1,20 @@
 use crate::domain::game::DTOState;
+use crate::domain::game::GameState;
+use crate::domain::game::Tile;
 use crate::VecState;
-use roguevtt_server::configuration::{self, DatabaseSettings};
+use anyhow::Result;
+use roguevtt_server::configuration::DatabaseSettings;
 use serde_json;
 use sqlx::PgPool;
 use sqlx::Pool;
 use sqlx::Postgres;
-use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use uuid::Uuid;
 
 struct DB {
-    pool: Arc<Pool<Postgres>>,
+    pool: Pool<Postgres>,
 }
 
 impl DB {
@@ -21,8 +24,36 @@ impl DB {
             .expect("Failed to connect to postgres");
 
         DB {
-            pool: Arc::new(connection_pool),
+            pool: connection_pool,
         }
+    }
+
+    pub async fn save(self, gs: &GameState<Vec<Tile>>) -> Result<()> {
+        // probaly want to deal with errors here
+        let conn = self.pool.acquire().await?;
+        let json: String = serde_json::to_string(gs)?;
+        let level_id = Uuid::parse_str(&gs.level.id.to_string()).unwrap(); // fix;
+        let game_id = Uuid::parse_str(&gs.id).unwrap(); // fix ;
+        let description = &gs.level.description[..64]; // todo trim this to 64 characters
+        let level_type = gs.level.kind.clone() as i16;
+
+        // TODO
+        // should do something with the actual result here
+        // not just reutrn Ok(());
+        sqlx::query!(
+            r#"
+        INSERT INTO levels(level_id, game_id, description, level_type, data) VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (level_id) DO UPDATE
+         SET description = $3,
+             data = $5
+        "#,
+            level_id,
+            game_id,
+            description,
+            level_type,
+            json
+        ).execute(&self.pool).await?;
+        Ok(())
     }
 }
 

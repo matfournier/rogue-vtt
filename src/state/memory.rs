@@ -21,7 +21,7 @@ use axum::extract::ws::{Message, WebSocket};
 
 use futures::{sink::SinkExt, stream::StreamExt};
 
-pub type VecState = GameState<Vec<Option<u16>>>;
+pub type VecState = GameState<Vec<Option<i16>>>;
 
 pub struct GameMetadata {
     pub current_level: String,

@@ -55,8 +55,8 @@ struct CreateGameParam {
     description: String,
     user: String,
     mode: String, // dungeon, world
-    x: u16,
-    y: u16,
+    x: i16,
+    y: i16,
     pw: String,
 }
 

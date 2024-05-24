@@ -28,15 +28,16 @@ config = "0.14.0"
 
 
 # Using table-like toml syntax to avoid a super-long line!
-[dependencies.sqlx] 
-version = "0.7.3" 
-default-features = false 
+[dependencies.sqlx]
+version = "0.7.3"
+default-features = false
 features = [
-"runtime-tokio", 
+"runtime-tokio",
 "tls-rustls",
 "macros",
 "postgres",
 "uuid",
 "chrono",
-"migrate"
+"migrate",
+"json"
 ]

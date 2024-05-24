@@ -14,13 +14,13 @@ use super::event::GameEvent;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tile {
-    x: u16,
-    y: u16,
-    idx: u16,
+    x: i16,
+    y: i16,
+    idx: i16,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize_repr, Deserialize_repr)]
-#[repr(u8)]
+#[repr(i8)]
 pub enum LevelType {
     Dungeon = 0,
     Overland = 1,
@@ -31,24 +31,24 @@ pub struct Level<T> {
     pub kind: LevelType,
     pub description: String,
     pub id: Id,
-    pub dimension: (u16, u16),
+    pub dimension: (i16, i16),
     pub tiles: T,
     pub features: T,
 }
 
 impl<T> Level<T> {
-    pub fn point_to_idx(&self, x: &u16, y: &u16) -> Option<u32> {
+    pub fn point_to_idx(&self, x: &i16, y: &i16) -> Option<i32> {
         if *x > self.dimension.0 || *y > self.dimension.1 {
             None
         } else {
-            u32::try_from(*y * self.dimension.1 + *x).ok()
+            i32::try_from(*y * self.dimension.1 + *x).ok()
         }
     }
 
-    pub fn idx_to_point(&self, idx: u32) -> (u16, u16) {
-        let x = idx % self.dimension.1 as u32;
-        let y = idx / self.dimension.1 as u32;
-        (x as u16, y as u16)
+    pub fn idx_to_point(&self, idx: i32) -> (i16, i16) {
+        let x = idx % self.dimension.1 as i32;
+        let y = idx / self.dimension.1 as i32;
+        (x as i16, y as i16)
 
         // idxToCoords(idx: number): [number, number] {
         //     let x = idx % this.width
@@ -58,8 +58,8 @@ impl<T> Level<T> {
     }
 }
 
-impl Level<Vec<Option<u16>>> {
-    pub fn add(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {
+impl Level<Vec<Option<i16>>> {
+    pub fn add(&mut self, x: i16, y: i16, tileset: i16, idx: i16) {
         if let Some(pos) = self.point_to_idx(&x, &y) {
             if tileset == 0 {
                 self.tiles[pos as usize] = Some(idx)
@@ -69,7 +69,7 @@ impl Level<Vec<Option<u16>>> {
         }
     }
 
-    pub fn remove(&mut self, x: u16, y: u16, tileset: u16) {
+    pub fn remove(&mut self, x: i16, y: i16, tileset: i16) {
         if let Some(idx) = self.point_to_idx(&x, &y) {
             if tileset == 0 {
                 self.tiles[idx as usize] = None
@@ -84,7 +84,7 @@ impl Level<Vec<Option<u16>>> {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize_repr, Deserialize_repr)]
-#[repr(u8)]
+#[repr(i8)]
 pub enum EntityType {
     Player = 0, // this is turning weird on the json, I'm geting string "player" rather than 0
     NPC = 1,
@@ -93,15 +93,15 @@ pub enum EntityType {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Entity {
     kind: EntityType,
-    x: u32,
-    y: u32,
+    x: i32,
+    y: i32,
     character: String,
     id: Id,
     description: String,
 }
 
 impl Entity {
-    pub fn move_entity(&mut self, x: u32, y: u32) {
+    pub fn move_entity(&mut self, x: i32, y: i32) {
         self.x = x;
         self.y = y;
     }
@@ -175,7 +175,7 @@ impl Entities {
 
     // this one seems really backwards to me.  If I have the entity why don't I just update it
     // what's the point of moving it to a new place?
-    pub fn move_entity(&mut self, entity: &Entity, x: u32, y: u32) {
+    pub fn move_entity(&mut self, entity: &Entity, x: i32, y: i32) {
         match entity.kind {
             EntityType::Player => {
                 // there is a `get_mut` you can probably use instead
@@ -237,10 +237,10 @@ pub struct GameState<T> {
 pub type DTOState = GameState<Vec<Tile>>;
 
 impl GameState<Vec<Tile>> {
-    pub fn to_rust(&self) -> GameState<Vec<Option<u16>>> {
-        let size: u32 = self.level.dimension.0 as u32 * self.level.dimension.1 as u32;
-        let mut dungeon: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
-        let mut features: Vec<Option<u16>> = Vec::with_capacity(size.clone() as usize);
+    pub fn to_rust(&self) -> GameState<Vec<Option<i16>>> {
+        let size: i32 = self.level.dimension.0 as i32 * self.level.dimension.1 as i32;
+        let mut dungeon: Vec<Option<i16>> = Vec::with_capacity(size.clone() as usize);
+        let mut features: Vec<Option<i16>> = Vec::with_capacity(size.clone() as usize);
         for _i in 0..size {
             dungeon.push(None);
             features.push(None);
@@ -279,13 +279,13 @@ impl GameState<Vec<Tile>> {
 // I wish I had Map<string, tile> but interop w/ typescript is a pain
 // this seems VERY wasteful but who knows
 
-// look into https://github.com/bincode-org/bincode 
+// look into https://github.com/bincode-org/bincode
 // and storing [u8] in postgres as a bytea type
 //
-// skip that use the jsonb type, sqlx supports it 
+// skip that use the jsonb type, sqlx supports it
 
-impl GameState<Vec<Option<u16>>> {
-    pub fn make(description: String, dimension: (u16, u16)) -> Self {
+impl GameState<Vec<Option<i16>>> {
+    pub fn make(description: String, dimension: (i16, i16)) -> Self {
         let mut players: HashMap<Id, Entity> = HashMap::new();
         players.insert(
             Id("one".to_string()),
@@ -331,7 +331,7 @@ impl GameState<Vec<Option<u16>>> {
             .enumerate()
             .for_each(|(i, tile)| match tile {
                 Some(tile_idx) => {
-                    let pt = self.level.idx_to_point(i as u32);
+                    let pt = self.level.idx_to_point(i as i32);
                     level_dungeon.push(Tile {
                         x: pt.0,
                         y: pt.1,
@@ -348,7 +348,7 @@ impl GameState<Vec<Option<u16>>> {
             .enumerate()
             .for_each(|(i, tile)| match tile {
                 Some(tile_idx) => {
-                    let pt = self.level.idx_to_point(i as u32);
+                    let pt = self.level.idx_to_point(i as i32);
                     level_features.push(Tile {
                         x: pt.0,
                         y: pt.1,
@@ -377,11 +377,11 @@ impl GameState<Vec<Option<u16>>> {
     }
 
     // TODO clean up that idx is u16 and not u8
-    pub fn add_tile(&mut self, x: u16, y: u16, tileset: u16, idx: u16) {
+    pub fn add_tile(&mut self, x: i16, y: i16, tileset: i16, idx: i16) {
         self.level.add(x, y, tileset, idx)
     }
 
-    pub fn remove_tile(&mut self, x: u16, y: u16, tileset: u16) {
+    pub fn remove_tile(&mut self, x: i16, y: i16, tileset: i16) {
         self.level.remove(x, y, tileset)
     }
 

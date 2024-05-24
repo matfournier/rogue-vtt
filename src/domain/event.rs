@@ -5,15 +5,15 @@ use serde::{Deserialize, Serialize};
 // Todo implement into_iter() for this type
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Bounds {
-    x: u16,
-    xx: u16,
-    y: u16,
-    yy: u16,
+    x: i16,
+    xx: i16,
+    y: i16,
+    yy: i16,
 }
 
 impl Bounds {
-    pub fn vec(&self) -> Vec<(u16, u16)> {
-        let mut v: Vec<(u16, u16)> = Vec::new();
+    pub fn vec(&self) -> Vec<(i16, i16)> {
+        let mut v: Vec<(i16, i16)> = Vec::new();
         for x in self.x..=self.xx {
             for y in self.y..=self.yy {
                 v.push((x, y));
@@ -48,24 +48,24 @@ pub enum Event {
         level_id: String,
     },
     TilePlaced {
-        x: u16,
-        y: u16,
-        tileset: u16,
-        idx: u16,
+        x: i16,
+        y: i16,
+        tileset: i16,
+        idx: i16,
     },
     TileRemoved {
-        x: u16,
-        y: u16,
-        layer: u16,
+        x: i16,
+        y: i16,
+        layer: i16,
     },
     Fill {
         bounds: Bounds,
-        tileset: u16,
-        idx: u16,
+        tileset: i16,
+        idx: i16,
     },
     Clear {
         bounds: Bounds,
-        layer: u16,
+        layer: i16,
     },
     AddToken {
         entity: Entity,
@@ -75,7 +75,7 @@ pub enum Event {
     },
     MoveToken {
         entity: Entity,
-        to: (u32, u32),
+        to: (i32, i32),
     },
     TextMessage {
         user: String,

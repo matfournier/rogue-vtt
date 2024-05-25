@@ -25,6 +25,7 @@ async-trait = "0.1.74"
 log = "0.4"
 env_logger = "0.10.1"
 config = "0.14.0"
+tokio-stream = "0.1.15"
 
 
 # Using table-like toml syntax to avoid a super-long line!

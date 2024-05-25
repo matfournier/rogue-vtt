@@ -22,6 +22,7 @@ use env_logger::Env;
 use roguevtt_server::configuration::get_configuration;
 use sqlx::PgPool;
 use state::memory::SocketConnector;
+use state::room::RoomConnector;
 use std::time::Duration;
 use tokio::{task, time};
 use tower_http::compression::CompressionLayer;
@@ -34,15 +35,17 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
 struct AppState {
-    state_tx: Arc<Sender<event::Msg>>,
-    connector: Arc<SocketConnector>,
+    // state_tx: Arc<Sender<event::Msg>>,
+    // connector: Arc<SocketConnector>,
     loader: Arc<dyn Loader + Send + Sync>,
+    rooms: Arc<RwLock<RoomConnector>>,
 }
 
 #[derive(Deserialize)]
@@ -98,31 +101,32 @@ async fn main() {
         .expect("Failed to connect to postgres");
 
     // build our mpsc channel for processing messages
-    let (state_tx, state_rx) = mpsc::channel::<event::Msg>(1000);
+    // let (state_tx, state_rx) = mpsc::channel::<event::Msg>(1000);
 
     // spawn a thread to listen
 
     let loader: Arc<dyn Loader + Send + Sync> = Arc::new(LocalLoader);
 
     let state: Arc<DashMap<String, GameChannel>> = Arc::new(DashMap::new());
-    let mut dispatcher = Dispatcher::make(state_rx, loader.clone(), state.clone());
+    // let mut dispatcher = Dispatcher::make(state_rx, loader.clone(), state.clone());
 
     // https://stackoverflow.com/questions/76015781/could-not-prove-that-closure-is-send maybe
 
-    let _ = tokio::spawn(async move {
-        dispatcher.start().await;
-    });
+    // let _ = tokio::spawn(async move {
+    //     dispatcher.start().await;
+    // });
 
-    let arc_state_tx = Arc::new(state_tx);
+    // let arc_state_tx = Arc::new(state_tx);
 
     let state = AppState {
-        state_tx: arc_state_tx.clone(),
-        connector: Arc::new(SocketConnector {
-            state: state.clone(),
-            loader: loader.clone(),
-            sender: arc_state_tx.clone(),
-        }),
+        // state_tx: arc_state_tx.clone(),
+        // connector: Arc::new(SocketConnector {
+        //     state: state.clone(),
+        //     loader: loader.clone(),
+        //     sender: arc_state_tx.clone(),
+        // }),
         loader: loader.clone(),
+        rooms: Arc::new(RwLock::new(RoomConnector::new())),
     };
 
     let cors = CorsLayer::new()
@@ -146,18 +150,18 @@ async fn main() {
         .layer(CompressionLayer::new())
         .layer(cors);
 
-    let _ = task::spawn(async move {
-        let mut interval = time::interval(Duration::from_millis(60000));
-        loop {
-            interval.tick().await;
-            let _ = arc_state_tx
-                .clone()
-                .send(event::Msg::Internal {
-                    event: event::InternalEvent::Persist,
-                })
-                .await;
-        }
-    });
+    // let _ = task::spawn(async move {
+    //     let mut interval = time::interval(Duration::from_millis(60000));
+    //     loop {
+    //         interval.tick().await;
+    //         let _ = arc_state_tx
+    //             .clone()
+    //             .send(event::Msg::Internal {
+    //                 event: event::InternalEvent::Persist,
+    //             })
+    //             .await;
+    //     }
+    // });
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -179,7 +183,17 @@ async fn load_game(
     if allowed {
         let resp = loader.get_for_json(loader::path_with_game(&id)).await;
         match resp {
-            Some(game) => serde_json::to_string(&game).unwrap().into_response(),
+            Some(game) => {
+                let rooms = state.rooms.clone();
+                rooms.read().await.addRoom(
+                    game.id.clone(),
+                    game.level.id.to_string(),
+                    "todo".to_string(),
+                );
+
+                println!("loading game");
+                serde_json::to_string(&game).unwrap().into_response()
+            }
             None => StatusCode::NOT_FOUND.into_response(),
         }
     } else {
@@ -200,6 +214,12 @@ async fn create_game(
             // loader.save_key(&game_state.id, &params.pw).await;
 
             tracing::info!("created game {:?}", &game_state.id);
+            let rooms = state.rooms.clone();
+            rooms.write().await.addRoom(
+                game_state.id.clone(),
+                game_state.level.id.to_string(),
+                "todo".to_string(),
+            );
             game_state.to_json().into_response()
         }
         Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
@@ -220,16 +240,28 @@ async fn websocket_handler(
     //     .await;
     let exists = true;
     if exists {
-        ws.on_upgrade(|socket| handle_socket(socket, state, params))
+        ws.on_upgrade(|socket| handle_socket_room(socket, state, params))
     } else {
         StatusCode::UNAUTHORIZED.into_response()
     }
 }
 
-async fn handle_socket(ws: WebSocket, state: AppState, params: GameLevelIdParam) {
+// async fn handle_socket(ws: WebSocket, state: AppState, params: GameLevelIdParam) {
+//     state
+//         .connector
+//         .clone()
+//         .connect(&params.game_id, ws, "todo")
+//         .await
+// }
+
+async fn handle_socket_room(ws: WebSocket, state: AppState, params: GameLevelIdParam) {
+    println!("entered handle_socket_room");
     state
-        .connector
+        .rooms
         .clone()
-        .connect(&params.game_id, ws, "todo")
+        .read()
         .await
+        .connect(Arc::new(params.game_id), ws, "todo")
+        .await;
+    println!("exited handle_socket_room");
 }

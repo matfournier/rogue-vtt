@@ -45,7 +45,7 @@ struct AppState {
     // state_tx: Arc<Sender<event::Msg>>,
     // connector: Arc<SocketConnector>,
     loader: Arc<dyn Loader + Send + Sync>,
-    rooms: Arc<RwLock<RoomConnector>>,
+    rooms: Arc<RoomConnector>,
 }
 
 #[derive(Deserialize)]
@@ -126,7 +126,7 @@ async fn main() {
         //     sender: arc_state_tx.clone(),
         // }),
         loader: loader.clone(),
-        rooms: Arc::new(RwLock::new(RoomConnector::new())),
+        rooms: Arc::new(RoomConnector::new()),
     };
 
     let cors = CorsLayer::new()
@@ -185,7 +185,7 @@ async fn load_game(
         match resp {
             Some(game) => {
                 let rooms = state.rooms.clone();
-                rooms.read().await.addRoom(
+                rooms.addRoom(
                     game.id.clone(),
                     game.level.id.to_string(),
                     "todo".to_string(),
@@ -215,7 +215,7 @@ async fn create_game(
 
             tracing::info!("created game {:?}", &game_state.id);
             let rooms = state.rooms.clone();
-            rooms.write().await.addRoom(
+            rooms.addRoom(
                 game_state.id.clone(),
                 game_state.level.id.to_string(),
                 "todo".to_string(),
@@ -246,21 +246,11 @@ async fn websocket_handler(
     }
 }
 
-// async fn handle_socket(ws: WebSocket, state: AppState, params: GameLevelIdParam) {
-//     state
-//         .connector
-//         .clone()
-//         .connect(&params.game_id, ws, "todo")
-//         .await
-// }
-
 async fn handle_socket_room(ws: WebSocket, state: AppState, params: GameLevelIdParam) {
     println!("entered handle_socket_room");
     state
         .rooms
         .clone()
-        .read()
-        .await
         .connect(Arc::new(params.game_id), ws, "todo")
         .await;
     println!("exited handle_socket_room");

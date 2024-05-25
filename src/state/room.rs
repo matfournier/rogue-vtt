@@ -96,99 +96,104 @@ impl RoomConnector {
 
     pub async fn connect(&self, game_id: Arc<String>, socket: WebSocket, _user: &str) {
         // let game_id: Arc<&str> = Arc::new(game_id);
-        let state = self.state.clone();
-        let room = state.get(game_id.clone().as_ref()).unwrap(); // TODO what about the case where the game doesn't exist?
 
-        let (mut sender, mut receiver) = socket.split();
+        if let Some(room) = self.state.clone().get(game_id.clone().as_ref()) {
+            // TODO what about the case where the game doesn't exist?
 
-        let mut server_to_client_messages = room.websocket_tx.subscribe();
+            let (mut sender, mut receiver) = socket.split();
 
-        let spawn_state = self.state.clone();
-        let send_game_id: Arc<String> = game_id.clone();
+            let mut server_to_client_messages = room.websocket_tx.subscribe();
+            std::mem::drop(room);
 
-        // these two take messages from the broadcast channel and sends it back to the client over their websocket
-        let mut send_task = tokio::spawn(async move {
-            // todo can probably chunk this
-            let mut stream = stream::iter(
-                spawn_state
-                    .get(send_game_id.as_ref())
-                    .unwrap()
-                    .get()
-                    .await
-                    .into_iter()
-                    .map(|x| x.data),
-            );
-            println!("room.get exited into stream");
-            // still have a race here, messages could be added while I'm streaming all these values but before the websocket gets connected.
-            // maybe add some new sort of lock here like an atomic boolean or something? use a write lock?
-            while let Some(value) = stream.next().await {
-                let msg: String = serde_json::to_string(&value).unwrap();
-                if sender.send(Message::Text(msg)).await.is_err() {
-                    break;
-                }
-            }
-            println!("finished streaming back to the client");
-            println!("hooking up websocket properly now");
+            let spawn_state = self.state.clone();
+            let send_game_id: Arc<String> = game_id.clone();
 
-            // connect the room broastcast to the client (recieve) websocket
-            while let Ok(msg) = server_to_client_messages.recv().await {
-                // In any websocket error, break loop.
-                dbg!(msg.clone());
-                if sender.send(Message::Text(msg)).await.is_err() {
-                    break;
-                }
-            }
-        });
-
-        let recv_state = self.state.clone();
-        let recv_game_id: Arc<String> = game_id.clone();
-
-        let mut recv_task = tokio::spawn(async move {
-            let room = recv_state.get(recv_game_id.clone().as_str()).unwrap(); // what to do if this doens't exist
-            while let Some(Ok(Message::Text(text))) = receiver.next().await {
-                dbg!(text.clone());
-                match serde_json::from_str::<Event>(&text) {
-                    Ok(v) => {
-                        // I wonder if this should go in it's own thread?
-                        // weird when I tried to spawn a thread to do this get tons
-                        // of ownership issues on gtid and sender
-                        let msg = Msg::Game {
-                            msg: GameEvent {
-                                data: v,
-                                game_id: recv_game_id.clone().to_string(),
-                                user: None,
-                                level: None,
-                            },
-                        };
-
-                        room.insert(msg).await;
-                    }
-                    Err(e) => {
-                        dbg!(text);
-                        tracing::error!(
-                            "Something went wrong with {:?}, error: {:?}",
-                            recv_game_id.clone(),
-                            &e
-                        )
+            // these two take messages from the broadcast channel and sends it back to the client over their websocket
+            let mut send_task = tokio::spawn(async move {
+                // todo can probably chunk this
+                let mut stream = stream::iter(
+                    spawn_state
+                        .get(send_game_id.as_ref())
+                        .unwrap()
+                        .get()
+                        .await
+                        .into_iter()
+                        .map(|x| x.data),
+                );
+                println!("room.get exited into stream");
+                // still have a race here, messages could be added while I'm streaming all these values but before the websocket gets connected.
+                // maybe add some new sort of lock here like an atomic boolean or something? use a write lock?
+                while let Some(value) = stream.next().await {
+                    let msg: String = serde_json::to_string(&value).unwrap();
+                    if sender.send(Message::Text(msg)).await.is_err() {
+                        break;
                     }
                 }
-            }
-        });
+                println!("finished streaming back to the client");
+                println!("hooking up websocket properly now");
 
-        let error_game_id = game_id.clone();
-        // If any one of the tasks run to completion, we abort the other.
-        tokio::select! {
-            _ = (&mut send_task) => {
-                // no way to block on this which is why we see a log message of 1
-                recv_task.abort();
-                tracing::info!("recv_task abort for game {:?} user {:?}", error_game_id.to_string(), &_user);
-            }, // . here add a print statement, curuous if we can use this + receiver_count to clean out our map later
-            _ = (&mut recv_task) => {
-                send_task.abort();
-                tracing::info!("send_task abort for game {:?} user {:?}", error_game_id.to_string(), &_user);
-            }
-        };
+                // connect the room broastcast to the client (recieve) websocket
+                while let Ok(msg) = server_to_client_messages.recv().await {
+                    // In any websocket error, break loop.
+                    dbg!(msg.clone());
+                    if sender.send(Message::Text(msg)).await.is_err() {
+                        break;
+                    }
+                }
+            });
 
-        // this takes messages from client and sends them to the server broadcast channel
+            let recv_state = self.state.clone();
+            let recv_game_id: Arc<String> = game_id.clone();
+
+            let mut recv_task = tokio::spawn(async move {
+                while let Some(Ok(Message::Text(text))) = receiver.next().await {
+                    let room = recv_state.get(recv_game_id.clone().as_str()).unwrap(); // what to do if this doens't exist
+                    dbg!(text.clone());
+                    match serde_json::from_str::<Event>(&text) {
+                        Ok(v) => {
+                            // I wonder if this should go in it's own thread?
+                            // weird when I tried to spawn a thread to do this get tons
+                            // of ownership issues on gtid and sender
+                            let msg = Msg::Game {
+                                msg: GameEvent {
+                                    data: v,
+                                    game_id: recv_game_id.clone().to_string(),
+                                    user: None,
+                                    level: None,
+                                },
+                            };
+
+                            room.insert(msg).await;
+                        }
+                        Err(e) => {
+                            dbg!(text);
+                            tracing::error!(
+                                "Something went wrong with {:?}, error: {:?}",
+                                recv_game_id.clone(),
+                                &e
+                            )
+                        }
+                    }
+                }
+            });
+
+            let error_game_id = game_id.clone();
+            // If any one of the tasks run to completion, we abort the other.
+            tokio::select! {
+                _ = (&mut send_task) => {
+                    // no way to block on this which is why we see a log message of 1
+                    recv_task.abort();
+                    tracing::info!("recv_task abort for game {:?} user {:?}", error_game_id.to_string(), &_user);
+                }, // . here add a print statement, curuous if we can use this + receiver_count to clean out our map later
+                _ = (&mut recv_task) => {
+                    send_task.abort();
+                    tracing::info!("send_task abort for game {:?} user {:?}", error_game_id.to_string(), &_user);
+                }
+            };
+
+            // this takes messages from client and sends them to the server broadcast channel
+        } else {
+            let _ = socket.close();
+        }
     }
 }

@@ -100,31 +100,10 @@ async fn main() {
         .await
         .expect("Failed to connect to postgres");
 
-    // build our mpsc channel for processing messages
-    // let (state_tx, state_rx) = mpsc::channel::<event::Msg>(1000);
-
-    // spawn a thread to listen
-
     let loader: Arc<dyn Loader + Send + Sync> = Arc::new(LocalLoader);
-
     let state: Arc<DashMap<String, GameChannel>> = Arc::new(DashMap::new());
-    // let mut dispatcher = Dispatcher::make(state_rx, loader.clone(), state.clone());
-
-    // https://stackoverflow.com/questions/76015781/could-not-prove-that-closure-is-send maybe
-
-    // let _ = tokio::spawn(async move {
-    //     dispatcher.start().await;
-    // });
-
-    // let arc_state_tx = Arc::new(state_tx);
 
     let state = AppState {
-        // state_tx: arc_state_tx.clone(),
-        // connector: Arc::new(SocketConnector {
-        //     state: state.clone(),
-        //     loader: loader.clone(),
-        //     sender: arc_state_tx.clone(),
-        // }),
         loader: loader.clone(),
         rooms: Arc::new(RoomConnector::new()),
     };

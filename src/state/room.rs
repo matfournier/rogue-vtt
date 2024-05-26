@@ -13,7 +13,6 @@ use crate::event::Msg;
 use axum::extract::ws::{Message, WebSocket};
 use std::sync::atomic::Ordering::Relaxed;
 use tokio::sync::broadcast;
-use tokio::sync::mpsc;
 
 use futures::{sink::SinkExt, stream::StreamExt};
 
@@ -22,10 +21,6 @@ pub struct Room {
     pub current_level: String,
     pub last_save: Option<u32>,
     pub path: String,
-    // rx: Receiver<Msg>,
-    // I feel like it should have the broadcast channel for the websocket?
-    //     // Channel used to send messages to all connected clients.
-    // see https://github.com/tokio-rs/axum/blob/main/examples/chat/src/main.rs
     pub websocket_tx: broadcast::Sender<String>, // we do not need the rx
     pub connected: AtomicI8,
 }
@@ -95,15 +90,10 @@ impl RoomConnector {
     }
 
     pub async fn connect(&self, game_id: Arc<String>, socket: WebSocket, _user: &str) {
-        // let game_id: Arc<&str> = Arc::new(game_id);
-
         if let Some(room) = self.state.clone().get(game_id.clone().as_ref()) {
-            // TODO what about the case where the game doesn't exist?
-
             let (mut sender, mut receiver) = socket.split();
 
             let mut server_to_client_messages = room.websocket_tx.subscribe();
-            std::mem::drop(room);
 
             let spawn_state = self.state.clone();
             let send_game_id: Arc<String> = game_id.clone();
@@ -111,6 +101,8 @@ impl RoomConnector {
             // these two take messages from the broadcast channel and sends it back to the client over their websocket
             let mut send_task = tokio::spawn(async move {
                 // todo can probably chunk this
+                // still have a race here, messages could be added while I'm streaming all these values but before the websocket gets connected.
+                // maybe add some new sort of lock here like an atomic boolean or something? use a write lock?
                 let mut stream = stream::iter(
                     spawn_state
                         .get(send_game_id.as_ref())
@@ -121,8 +113,7 @@ impl RoomConnector {
                         .map(|x| x.data),
                 );
                 println!("room.get exited into stream");
-                // still have a race here, messages could be added while I'm streaming all these values but before the websocket gets connected.
-                // maybe add some new sort of lock here like an atomic boolean or something? use a write lock?
+
                 while let Some(value) = stream.next().await {
                     let msg: String = serde_json::to_string(&value).unwrap();
                     if sender.send(Message::Text(msg)).await.is_err() {
@@ -190,8 +181,6 @@ impl RoomConnector {
                     tracing::info!("send_task abort for game {:?} user {:?}", error_game_id.to_string(), &_user);
                 }
             };
-
-            // this takes messages from client and sends them to the server broadcast channel
         } else {
             let _ = socket.close();
         }

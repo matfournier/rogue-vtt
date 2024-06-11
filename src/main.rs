@@ -20,11 +20,14 @@ use axum::{
 use dashmap::DashMap;
 use env_logger::Env;
 use roguevtt_server::configuration::get_configuration;
+use roguevtt_server::configuration::SaveSettings;
 use sqlx::PgPool;
 use state::room::RoomConnector;
+use std::str::FromStr;
 use std::time::Duration;
 use tokio::{task, time};
 use tower_http::compression::CompressionLayer;
+use uuid::Uuid;
 
 use crate::state::memory::VecState;
 use domain::event;
@@ -84,6 +87,7 @@ impl CreateGameParam {
 }
 
 #[tokio::main]
+#[warn(clippy::future_not_send)]
 async fn main() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer = BunyanFormattingLayer::new("roguevtt".into(), std::io::stdout);
@@ -101,11 +105,12 @@ async fn main() {
         .expect("Failed to connect to postgres");
 
     let loader: Arc<dyn Loader + Send + Sync> = Arc::new(LocalLoader);
-    let state: Arc<DashMap<String, GameChannel>> = Arc::new(DashMap::new());
+
+    let rooms = Arc::new(RoomConnector::new());
 
     let state = AppState {
         loader: loader.clone(),
-        rooms: Arc::new(RoomConnector::new()),
+        rooms: rooms.clone(),
     };
 
     let cors = CorsLayer::new()
@@ -129,18 +134,9 @@ async fn main() {
         .layer(CompressionLayer::new())
         .layer(cors);
 
-    // let _ = task::spawn(async move {
-    //     let mut interval = time::interval(Duration::from_millis(60000));
-    //     loop {
-    //         interval.tick().await;
-    //         let _ = arc_state_tx
-    //             .clone()
-    //             .send(event::Msg::Internal {
-    //                 event: event::InternalEvent::Persist,
-    //             })
-    //             .await;
-    //     }
-    // });
+    let _ = task::spawn(async move {
+        save_all_games(rooms.clone(), configuration.saving).await;
+    });
 
     // run it with hyper
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -151,6 +147,13 @@ async fn main() {
         .unwrap();
 }
 
+async fn save_all_games(rooms: Arc<RoomConnector>, settings: SaveSettings) {
+    let mut interval = time::interval(Duration::from_millis(settings.period));
+    loop {
+        interval.tick().await;
+        rooms.save_all(settings.parallelism).await;
+    }
+}
 async fn load_game(
     State(state): State<AppState>,
     Path(id): Path<String>,
@@ -164,11 +167,7 @@ async fn load_game(
         match resp {
             Some(game) => {
                 let rooms = state.rooms.clone();
-                rooms.add_room(
-                    game.meta.id.clone(),
-                    game.level.id.to_string(),
-                    "todo".to_string(),
-                );
+                rooms.add_room(game.meta.id.clone(), game.level.id);
 
                 tracing::info!("loading game {:?}", &game.meta.id);
                 serde_json::to_string(&game).unwrap().into_response()
@@ -194,11 +193,7 @@ async fn create_game(
 
             tracing::info!("created game {:?}", &game_state.meta.id);
             let rooms = state.rooms.clone();
-            rooms.add_room(
-                game_state.meta.id.clone(),
-                game_state.level.id.to_string(),
-                "todo".to_string(),
-            );
+            rooms.add_room(game_state.meta.id.clone(), game_state.level.id);
             game_state.to_json().into_response()
         }
         Err(e) => (StatusCode::BAD_REQUEST, e).into_response(),
@@ -219,18 +214,23 @@ async fn websocket_handler(
     //     .await;
     let exists = true;
     if exists {
-        ws.on_upgrade(|socket| handle_socket_room(socket, state, params))
+        match Uuid::from_str(&params.game_id) {
+            Ok(uuid) => {
+                ws.on_upgrade(move |socket| handle_socket_room(socket, state, params, uuid))
+            }
+            Err(_) => StatusCode::NOT_FOUND.into_response(),
+        }
     } else {
         StatusCode::UNAUTHORIZED.into_response()
     }
 }
 
-async fn handle_socket_room(ws: WebSocket, state: AppState, params: GameLevelIdParam) {
+async fn handle_socket_room(ws: WebSocket, state: AppState, params: GameLevelIdParam, uuid: Uuid) {
     println!("entered handle_socket_room");
     state
         .rooms
         .clone()
-        .connect(Arc::new(params.game_id), ws, "todo")
+        .connect(Arc::new(uuid), ws, "todo")
         .await;
     println!("exited handle_socket_room");
 }

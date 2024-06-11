@@ -3,11 +3,13 @@ use serde_json;
 use std::sync::atomic::AtomicI8;
 use tokio::sync::RwLock;
 use tokio_stream::{self as stream};
+use uuid::Uuid;
 
 use dashmap::DashMap;
 use std::sync::Arc;
 
 use crate::domain::event::GameEvent;
+use crate::domain::game::GameState;
 use crate::event::Msg;
 use axum::extract::ws::{Message, WebSocket};
 use std::sync::atomic::Ordering::Relaxed;
@@ -16,10 +18,10 @@ use tokio::sync::broadcast;
 use futures::{sink::SinkExt, stream::StreamExt};
 
 pub struct Room {
+    pub game_id: Uuid,
     pub messages: RwLock<Vec<GameEvent>>,
-    pub current_level: String,
+    pub current_level: Uuid,
     pub last_save: Option<u32>,
-    pub path: String,
     pub websocket_tx: broadcast::Sender<String>, // we do not need the rx
     pub connected: AtomicI8,
 }
@@ -57,10 +59,28 @@ impl Room {
     pub fn remove_user(&self) {
         self.connected.fetch_sub(1, Relaxed);
     }
+
+    pub async fn save(&self) {
+        let mut guard = self.messages.write().await;
+        if (!guard.is_empty()) {
+            tracing::info!("saving level {:?}", self.game_id);
+
+            let path = crate::loader::path_with_game(&self.game_id.to_string());
+
+            // todo error handling
+            let mut game = crate::state::db::load_rust(&path).await.unwrap();
+            guard
+                .drain(..)
+                .into_iter()
+                .for_each(|event| game.update_with(&event));
+            std::mem::drop(guard);
+            crate::state::db::save(&game).await;
+        }
+    }
 }
 
 pub struct RoomConnector {
-    pub state: Arc<DashMap<String, Room>>,
+    pub state: Arc<DashMap<Uuid, Room>>,
 }
 
 impl RoomConnector {
@@ -70,17 +90,17 @@ impl RoomConnector {
         }
     }
 
-    pub fn add_room(&self, game_id: String, current_level: String, path: String) {
+    pub fn add_room(&self, game_id: Uuid, current_level: Uuid) {
         let rooms = self.state.clone();
         if (!rooms.contains_key(&game_id)) {
             let (tx, _rx) = broadcast::channel::<String>(150);
             self.state.clone().insert(
                 game_id,
                 Room {
+                    game_id: game_id.clone(),
                     messages: RwLock::new(Vec::new()),
                     current_level: current_level,
                     last_save: None,
-                    path: path,
                     websocket_tx: tx,
                     connected: AtomicI8::new(0),
                 },
@@ -88,14 +108,31 @@ impl RoomConnector {
         };
     }
 
-    pub async fn connect(&self, game_id: Arc<String>, socket: WebSocket, _user: &str) {
+    // higher kinded lifetyp error when this is combined w/ spoawn
+    pub async fn save_all(&self, parallelism: usize) {
+        tracing::info!("Starting to save");
+        let s = self.state.clone();
+
+        // took me forever to find https://github.com/rust-lang/rust/issues/104382
+        // which says to .boxed() first
+        let _ = futures::stream::iter(s.iter().map(|multi| async move { multi.save().await }))
+            .boxed()
+            .buffer_unordered(parallelism)
+            .into_future()
+            .await;
+
+        tracing::info!("Finished saving");
+    }
+
+    // can't that be a &uuid ?
+    pub async fn connect(&self, game_id: Arc<Uuid>, socket: WebSocket, _user: &str) {
         if let Some(room) = self.state.clone().get(game_id.clone().as_ref()) {
             let (mut sender, mut receiver) = socket.split();
 
             let mut server_to_client_messages = room.websocket_tx.subscribe();
 
             let spawn_state = self.state.clone();
-            let send_game_id: Arc<String> = game_id.clone();
+            let send_game_id: Arc<Uuid> = game_id.clone();
 
             // these two take messages from the broadcast channel and sends it back to the client over their websocket
             let mut send_task = tokio::spawn(async move {
@@ -133,11 +170,11 @@ impl RoomConnector {
             });
 
             let recv_state = self.state.clone();
-            let recv_game_id: Arc<String> = game_id.clone();
+            let recv_game_id: Arc<Uuid> = game_id.clone();
 
             let mut recv_task = tokio::spawn(async move {
                 while let Some(Ok(Message::Text(text))) = receiver.next().await {
-                    let room = recv_state.get(recv_game_id.clone().as_str()).unwrap(); // what to do if this doens't exist
+                    let room = recv_state.get(&recv_game_id.clone()).unwrap(); // what to do if this doens't exist
                     dbg!(text.clone());
                     match serde_json::from_str::<Event>(&text) {
                         Ok(v) => {

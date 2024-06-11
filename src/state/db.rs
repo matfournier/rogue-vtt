@@ -11,7 +11,6 @@ use sqlx::Postgres;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use uuid::Uuid;
 
 struct DB {
     pool: Pool<Postgres>,
@@ -31,8 +30,8 @@ impl DB {
     pub async fn save(self, gs: &GameState<Vec<Tile>>) -> Result<()> {
         // probaly want to deal with errors here
         let json: String = serde_json::to_string(gs)?;
-        let level_id = Uuid::parse_str(&gs.level.id.to_string()).unwrap(); // fix;
-        let game_id = Uuid::parse_str(&gs.meta.id).unwrap(); // fix ;
+        let level_id = &gs.level.id;
+        let game_id = &gs.meta.id;
         let description = &gs.level.description[..64]; // todo trim this to 64 characters
         let level_type = gs.level.kind.clone() as i16;
 
@@ -58,7 +57,7 @@ impl DB {
 
 pub async fn save(gs: &VecState) {
     let game = gs.meta.id.clone();
-    let path = game_to_path(&game);
+    let path = game_to_path(&game.to_string());
 
     // todo deal with this better.
     let mut file = OpenOptions::new()

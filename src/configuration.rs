@@ -4,6 +4,7 @@ use config::Config;
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application_port: u16,
+    pub saving: SaveSettings,
 }
 
 #[derive(serde::Deserialize)]
@@ -13,6 +14,12 @@ pub struct DatabaseSettings {
     pub port: u16,
     pub host: String,
     pub database_name: String,
+}
+
+#[derive(serde::Deserialize, Clone, Copy)]
+pub struct SaveSettings {
+    pub parallelism: usize,
+    pub period: u64,
 }
 
 impl DatabaseSettings {

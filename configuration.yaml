@@ -6,4 +6,6 @@ database:
   username: "postgres"
   password: "password"
   database_name: "rogue"
-
+saving:
+  parallelism: 5
+  period: 60000

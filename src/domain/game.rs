@@ -5,9 +5,6 @@ use serde_repr::*;
 
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::fmt;
-use std::ops::Deref;
-use std::str::FromStr;
 use uuid::Uuid;
 
 use super::event::GameEvent;
@@ -30,7 +27,7 @@ pub enum LevelType {
 pub struct Level<T> {
     pub kind: LevelType,
     pub description: String,
-    pub id: Id,
+    pub id: Uuid,
     pub dimension: (i16, i16),
     pub tiles: T,
     pub features: T,
@@ -97,7 +94,7 @@ pub struct Entity {
     x: i32,
     y: i32,
     character: String,
-    id: Id,
+    id: Uuid,
     description: String,
 }
 
@@ -108,41 +105,10 @@ impl Entity {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Id(String);
-
-impl Id {
-    pub fn new(val: String) -> Self {
-        Id(val)
-    }
-}
-
-impl FromStr for Id {
-    type Err = Box<dyn std::error::Error>;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(Id(s.to_string()))
-    }
-}
-
-impl fmt::Display for Id {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Deref for Id {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Entities {
-    players: HashMap<Id, Entity>,
-    npcs: HashMap<Id, Entity>,
+    players: HashMap<Uuid, Entity>,
+    npcs: HashMap<Uuid, Entity>,
 }
 
 impl Entities {
@@ -204,13 +170,13 @@ pub struct EntityVec {
 
 impl EntityVec {
     pub fn to_entities(&self) -> Entities {
-        let players: HashMap<Id, Entity> = self
+        let players: HashMap<Uuid, Entity> = self
             .players
             .clone()
             .into_iter()
             .map(|e| (e.id.clone(), e))
             .collect::<HashMap<_, _>>();
-        let npcs: HashMap<Id, Entity> = self
+        let npcs: HashMap<Uuid, Entity> = self
             .npcs
             .clone()
             .into_iter()
@@ -236,8 +202,8 @@ pub struct GameState<T> {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GameMetadata {
-    pub id: String,
-    pub level_id: String,
+    pub id: Uuid,
+    pub level_id: Uuid,
     pub title: String,
 }
 
@@ -293,19 +259,19 @@ impl GameState<Vec<Tile>> {
 
 impl GameState<Vec<Option<i16>>> {
     pub fn make(description: String, dimension: (i16, i16)) -> Self {
-        let mut players: HashMap<Id, Entity> = HashMap::new();
+        let mut players: HashMap<Uuid, Entity> = HashMap::new();
         players.insert(
-            Id("one".to_string()),
+            Uuid::new_v4(),
             Entity {
                 kind: EntityType::Player,
                 x: 50,
                 y: 50,
                 character: "g".to_string(),
-                id: Id("shkdfhs".to_string()),
+                id: Uuid::new_v4(),
                 description: "some_desc".to_string(),
             },
         );
-        let npcs: HashMap<Id, Entity> = HashMap::new();
+        let npcs: HashMap<Uuid, Entity> = HashMap::new();
         let entities = Entities {
             players: players,
             npcs: npcs,
@@ -313,7 +279,7 @@ impl GameState<Vec<Option<i16>>> {
         let level = Level {
             kind: LevelType::Dungeon,
             description: description,
-            id: Id(Uuid::new_v4().to_string()),
+            id: Uuid::new_v4(),
             dimension: dimension,
             tiles: Vec::new(),
             features: Vec::new(),
@@ -321,8 +287,8 @@ impl GameState<Vec<Option<i16>>> {
         };
 
         let meta: GameMetadata = GameMetadata {
-            id: Uuid::new_v4().to_string(),
-            level_id: level.id.to_string(),
+            id: Uuid::new_v4(),
+            level_id: level.id,
             title: "todo".to_string(),
         };
 

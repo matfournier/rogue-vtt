@@ -34,6 +34,7 @@ pub struct Level<T> {
     pub dimension: (i16, i16),
     pub tiles: T,
     pub features: T,
+    pub entities: Entities,
 }
 
 impl<T> Level<T> {
@@ -230,8 +231,14 @@ impl EntityVec {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GameState<T> {
     pub level: Level<T>,
-    pub entities: Entities,
+    pub meta: GameMetadata,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct GameMetadata {
     pub id: String,
+    pub level_id: String,
+    pub title: String,
 }
 
 pub type DTOState = GameState<Vec<Tile>>;
@@ -266,12 +273,12 @@ impl GameState<Vec<Tile>> {
             dimension: self.level.dimension.clone(),
             tiles: dungeon,
             features: features,
+            entities: self.level.entities.clone(),
         };
 
         GameState {
             level: new_level,
-            entities: self.entities.clone(),
-            id: self.id.clone(),
+            meta: self.meta.clone(),
         }
     }
 }
@@ -310,11 +317,18 @@ impl GameState<Vec<Option<i16>>> {
             dimension: dimension,
             tiles: Vec::new(),
             features: Vec::new(),
+            entities: entities,
         };
+
+        let meta: GameMetadata = GameMetadata {
+            id: Uuid::new_v4().to_string(),
+            level_id: level.id.to_string(),
+            title: "todo".to_string(),
+        };
+
         GameState {
             level: level,
-            entities: entities,
-            id: Uuid::new_v4().to_string(),
+            meta: meta,
         }
     }
 
@@ -365,12 +379,12 @@ impl GameState<Vec<Option<i16>>> {
             dimension: self.level.dimension.clone(),
             tiles: level_dungeon,
             features: level_features,
+            entities: self.level.entities.clone(),
         };
 
         let new_gs = GameState {
             level: new_level,
-            entities: self.entities.clone(),
-            id: self.id.clone(),
+            meta: self.meta.clone(),
         };
 
         serde_json::to_string(&new_gs).unwrap()
@@ -404,9 +418,11 @@ impl GameState<Vec<Option<i16>>> {
                 .vec()
                 .into_iter()
                 .for_each(|(x, y)| self.remove_tile(x, y, *layer)),
-            &Event::AddToken { ref entity } => self.entities.add_entity(entity),
-            &Event::MoveToken { ref entity, to } => self.entities.move_entity(entity, to.0, to.1),
-            &Event::RemoveToken { ref entity } => self.entities.add_entity(entity),
+            &Event::AddToken { ref entity } => self.level.entities.add_entity(entity),
+            &Event::MoveToken { ref entity, to } => {
+                self.level.entities.move_entity(entity, to.0, to.1)
+            }
+            &Event::RemoveToken { ref entity } => self.level.entities.add_entity(entity),
             _ => (),
         };
     }

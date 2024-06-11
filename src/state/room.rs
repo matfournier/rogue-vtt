@@ -1,6 +1,5 @@
 use crate::domain::event::Event;
 use serde_json;
-use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::AtomicI8;
 use tokio::sync::RwLock;
 use tokio_stream::{self as stream};
@@ -71,7 +70,7 @@ impl RoomConnector {
         }
     }
 
-    pub fn addRoom(&self, game_id: String, current_level: String, path: String) {
+    pub fn add_room(&self, game_id: String, current_level: String, path: String) {
         let rooms = self.state.clone();
         if (!rooms.contains_key(&game_id)) {
             let (tx, _rx) = broadcast::channel::<String>(150);
@@ -182,6 +181,7 @@ impl RoomConnector {
                 }
             };
         } else {
+            println!("game does not exist");
             let _ = socket.close();
         }
     }

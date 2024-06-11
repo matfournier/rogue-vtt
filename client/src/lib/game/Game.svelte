@@ -103,15 +103,15 @@
         map = dungeonMapFrom(gs.level, tileSheet, camera);
 
         let gameContext = {
-            gameId: gs.id,
+            gameId: gs.meta.id,
             levelId: gs.level.id,
             userId: "TODO",
         };
 
         entities = new EntityState(camera);
-        gs.entities.npcs.forEach((e) => entities.addEntity(e));
-        gs.entities.players.forEach((e) => entities.addEntity(e));
-        gameId = gs.id;
+        gs.level.entities.npcs.forEach((e) => entities.addEntity(e));
+        gs.level.entities.players.forEach((e) => entities.addEntity(e));
+        gameId = gs.meta.id;
         // TODO: this default canvas stuff should move somewhere else.
         let defaultTile = tileSheet.dungeon.tiles[101];
         context = canvas.getContext("2d");

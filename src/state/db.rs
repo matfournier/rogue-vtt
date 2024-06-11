@@ -32,7 +32,7 @@ impl DB {
         // probaly want to deal with errors here
         let json: String = serde_json::to_string(gs)?;
         let level_id = Uuid::parse_str(&gs.level.id.to_string()).unwrap(); // fix;
-        let game_id = Uuid::parse_str(&gs.id).unwrap(); // fix ;
+        let game_id = Uuid::parse_str(&gs.meta.id).unwrap(); // fix ;
         let description = &gs.level.description[..64]; // todo trim this to 64 characters
         let level_type = gs.level.kind.clone() as i16;
 
@@ -57,7 +57,7 @@ impl DB {
 }
 
 pub async fn save(gs: &VecState) {
-    let game = gs.id.clone();
+    let game = gs.meta.id.clone();
     let path = game_to_path(&game);
 
     // todo deal with this better.

@@ -16,7 +16,8 @@ export type Level = {
     id: String,
     dimension: [number, number] // cols, rows 
     tiles: Array<Tile>,
-    features: Array<Tile>
+    features: Array<Tile>,
+    entities: Entities
 }
 
 
@@ -47,10 +48,15 @@ export function entitiesToJson(e: Entities): EntitiesMap {
     return em
 }
 
+export type GameMetadata = {
+    id: String,
+    levelId: String,
+    title: String
+}
+
 export type GameState = {
     level: Level,
-    entities: Entities
-    id: String
+    meta: GameMetadata
 }
 
 export function gameStateToJson(gs: GameState): String {
@@ -59,30 +65,55 @@ export function gameStateToJson(gs: GameState): String {
 
 export function parseGamestate(s: any): GameState {
     // let entities: Entities = s["entities"];
-    let e = s["entities"];
+    // let e = s["entities"];
+
+    // let players = new Array<Entity>();
+    // Object.keys(e["players"]).forEach((k) => {
+    //     players.push(e["players"][k])
+    // });
+
+    // let npcs = new Array<Entity>();
+    // Object.keys(e["npcs"]).forEach((k) => {
+    //     players.push(e["npcs"][k])
+    // });
+
+    // let entities: Entities = {
+    //     players: players,
+    //     npcs: npcs
+    // };
+
+    let meta: GameMetadata = s["meta"];
+
+    let rawLevel = s["level"];
+
 
     let players = new Array<Entity>();
-    Object.keys(e["players"]).forEach((k) => {
-        players.push(e["players"][k])
+    Object.keys(rawLevel["entities"]["players"]).forEach((k) => {
+        players.push(rawLevel["entities"]["players"][k])
     });
-
     let npcs = new Array<Entity>();
-    Object.keys(e["npcs"]).forEach((k) => {
-        players.push(e["npcs"][k])
+    Object.keys(rawLevel["entities"]["npcs"]).forEach((k) => {
+        players.push(rawLevel["entities"]["npcs"][k])
     });
 
-    let entities: Entities = {
+    let newEntities: Entities = {
         players: players,
         npcs: npcs
-    };
+    }
 
-
-    let level: Level = s["level"];
+    let level: Level = {
+        kind: rawLevel["kind"],
+        description: rawLevel["description"],
+        id: rawLevel["id"],
+        dimension: rawLevel["dimension"],
+        tiles: rawLevel["tiles"],
+        features: rawLevel["features"],
+        entities: newEntities
+    }
 
     return {
         level: level,
-        entities: entities,
-        id: s["id"]
+        meta: meta
     }
 
 }

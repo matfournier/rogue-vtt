@@ -21,7 +21,6 @@ use dashmap::DashMap;
 use env_logger::Env;
 use roguevtt_server::configuration::get_configuration;
 use sqlx::PgPool;
-use state::memory::SocketConnector;
 use state::room::RoomConnector;
 use std::time::Duration;
 use tokio::{task, time};
@@ -38,7 +37,9 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::RwLock;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing::subscriber::set_global_default;
+use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
+use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 
 #[derive(Clone)]
 struct AppState {
@@ -84,17 +85,16 @@ impl CreateGameParam {
 
 #[tokio::main]
 async fn main() {
-    // tracing_subscriber::registry()
-    //     .with(
-    //         tracing_subscriber::EnvFilter::try_from_default_env()
-    //             .unwrap_or_else(|_| "example_form=debug".into()),
-    //     )
-    //     .with(tracing_subscriber::fmt::layer())
-    //     .init();
-
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let formatting_layer = BunyanFormattingLayer::new("roguevtt".into(), std::io::stdout);
 
     let configuration = get_configuration().expect("Failed to read configuration.yaml");
+    let subscriber = Registry::default()
+        .with(env_filter)
+        .with(JsonStorageLayer)
+        .with(formatting_layer);
+
+    set_global_default(subscriber).expect("Failed to set subscriber");
 
     let connection_pool = PgPool::connect(&configuration.database.connection_string())
         .await
@@ -164,13 +164,13 @@ async fn load_game(
         match resp {
             Some(game) => {
                 let rooms = state.rooms.clone();
-                rooms.addRoom(
-                    game.id.clone(),
+                rooms.add_room(
+                    game.meta.id.clone(),
                     game.level.id.to_string(),
                     "todo".to_string(),
                 );
 
-                println!("loading game");
+                tracing::info!("loading game {:?}", &game.meta.id);
                 serde_json::to_string(&game).unwrap().into_response()
             }
             None => StatusCode::NOT_FOUND.into_response(),
@@ -192,10 +192,10 @@ async fn create_game(
             loader.save_direct(&game_state).await;
             // loader.save_key(&game_state.id, &params.pw).await;
 
-            tracing::info!("created game {:?}", &game_state.id);
+            tracing::info!("created game {:?}", &game_state.meta.id);
             let rooms = state.rooms.clone();
-            rooms.addRoom(
-                game_state.id.clone(),
+            rooms.add_room(
+                game_state.meta.id.clone(),
                 game_state.level.id.to_string(),
                 "todo".to_string(),
             );

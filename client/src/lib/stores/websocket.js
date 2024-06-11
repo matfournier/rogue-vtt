@@ -8,14 +8,12 @@ const reopenTimeouts = [2000, 5000, 10000, 30000, 60000];
  * @param {string} url the WebSocket url
  * @param {any} initialValue store value used before 1st. response from server is present
  * @param {string[]} socketOptions transparently passed to the WebSocket constructor
- * @return {Store}
- */
+  */
 export function websocketStore(url, initialValue, socketOptions) {
   let socket, openPromise, reopenTimeoutHandler;
   let reopenCount = 0;
   const subscriptions = new Set();
 
-  console.log("P{ENINSHDJFHKSJDHFS");
   function reopenTimeout() {
     const n = reopenCount;
     reopenCount++;
@@ -63,7 +61,9 @@ export function websocketStore(url, initialValue, socketOptions) {
       subscriptions.forEach((subscription) => subscription(initialValue));
     };
 
-    socket.onclose = (event) => console.log("websocket closed"); //reopen();
+    socket.onclose = (event) => {
+      console.log("websocket closed"); //reopen();
+    }
 
     openPromise = new Promise((resolve, reject) => {
       socket.onerror = (error) => {

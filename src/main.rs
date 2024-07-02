@@ -4,7 +4,6 @@ mod state;
 use crate::state::loader;
 use crate::state::loader::Loader;
 use crate::state::loader::LocalLoader;
-use crate::state::memory::GameChannel;
 use axum::routing::get_service;
 use axum::{
     extract::{
@@ -12,13 +11,14 @@ use axum::{
         Json, Path, Query, State,
     },
     http::{Method, StatusCode},
-    response::{IntoResponse, Response},
+    response::{Html, IntoResponse, Response},
     routing::get,
     routing::post,
     Router,
 };
-use dashmap::DashMap;
-use env_logger::Env;
+use lazy_static::lazy_static;
+use minijinja::{path_loader, Environment};
+use minijinja_autoreload::AutoReloader;
 use roguevtt_server::configuration::get_configuration;
 use roguevtt_server::configuration::SaveSettings;
 use sqlx::PgPool;
@@ -26,23 +26,26 @@ use state::room::RoomConnector;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::{task, time};
-use tower_http::compression::CompressionLayer;
+use tower_http::{
+    compression::Compression,
+    compression::CompressionLayer,
+    services::{ServeDir, ServeFile},
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
+};
 use uuid::Uuid;
 
 use crate::state::memory::VecState;
 use domain::event;
 use serde::{Deserialize, Serialize};
-use state::memory::Dispatcher;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
-use tokio::sync::RwLock;
+
 use tower_http::cors::{Any, CorsLayer};
-use tower_http::services::ServeDir;
 use tracing::subscriber::set_global_default;
 use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+
+use tracing::Level;
 
 #[derive(Clone)]
 struct AppState {
@@ -86,9 +89,26 @@ impl CreateGameParam {
     }
 }
 
+pub const TEMPLATE_PATH: &str = "app/templates";
+
+lazy_static! {
+    pub static ref TEMPLATES: AutoReloader = {
+        AutoReloader::new(|notifier| {
+            let mut env = Environment::new();
+            env.set_loader(path_loader(TEMPLATE_PATH));
+            notifier.watch_path(TEMPLATE_PATH, true);
+            Ok(env)
+        })
+    };
+}
+
 #[tokio::main]
 #[warn(clippy::future_not_send)]
 async fn main() {
+    let static_files = Compression::new(
+        ServeDir::new("app") // if no files found, check your pwd to make sure it's at project root
+            .fallback(ServeFile::new("app/404.html")),
+    );
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     let formatting_layer = BunyanFormattingLayer::new("roguevtt".into(), std::io::stdout);
 
@@ -122,17 +142,19 @@ async fn main() {
 
     // build our application with some routes
     let app = Router::new()
+        .route("/", get(home))
         .route("/create_game", post(create_game))
         .route("/load_game/:game_id", get(load_game))
         .route("/websocket", get(websocket_handler))
-        .fallback(
-            get_service(ServeDir::new("./client/dist")).handle_error(|_| async move {
-                (StatusCode::INTERNAL_SERVER_ERROR, "internal server error")
-            }),
-        )
+        .fallback_service(static_files)
         .with_state(state)
         .layer(CompressionLayer::new())
-        .layer(cors);
+        .layer(cors)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(DefaultOnResponse::new().level(Level::INFO)),
+        );
 
     let _ = task::spawn(async move {
         save_all_games(rooms.clone(), configuration.saving).await;
@@ -145,6 +167,15 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+pub async fn home() -> axum::response::Result<Html<String>> {
+    let env = TEMPLATES.acquire_env().unwrap();
+    let template = env.get_template("index.html").unwrap();
+    let html = template
+        .render(())
+        .map_err(|_| StatusCode::from_u16(500).unwrap())?;
+    Ok(html.into())
 }
 
 async fn save_all_games(rooms: Arc<RoomConnector>, settings: SaveSettings) {

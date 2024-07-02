@@ -1552,6 +1552,7 @@ dependencies = [
  "dashmap",
  "env_logger",
  "futures",
+ "lazy_static",
  "log",
  "minijinja",
  "minijinja-autoreload",

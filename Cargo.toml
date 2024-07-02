@@ -29,6 +29,7 @@ config = "0.14.0"
 tokio-stream = "0.1.15"
 minijinja = { version = "^1.0", default-features = false, features = ["loader", "multi_template"] }
 minijinja-autoreload = "^1.0"
+lazy_static = "^1"
 
 # Using table-like toml syntax to avoid a super-long line!
 [dependencies.sqlx]

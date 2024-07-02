@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    {% block head %}
+      <!-- <script type="module"> is always `defer` -->
+      <script type="module">
+        import "http://localhost:5173/@vite/client";
+        window.process = { env: { NODE_ENV: "development" } };
+      </script>
+      <script type="module" src="http://localhost:5173/ts/index.ts"></script>
+      <script
+        type="module"
+        src="http://localhost:5173/ts/updateSwPrompt.ts"
+      ></script>
+
+      <link rel="stylesheet" href="http://localhost:5173/css/index.css" />
+
+      <!-- everything below here is required for PWA-->
+      <!-- default output of vite-plugin-pwa -->
+
+      <link rel="manifest" href="/manifest.webmanifest" />
+      <!-- TODO: use actual theme colors from tailwind-->
+      <meta name="theme-color" content="#FFFFFF" />
+      <!-- generate all below logos using https://realfavicongenerator.net/ -->
+      <!-- see: https://vite-pwa-org.netlify.app/guide/pwa-minimal-requirements.html -->
+      <link rel="icon" href="/favicon.ico" />
+      <link
+        rel="apple-touch-icon"
+        href="/images/logo/apple-touch-icon.png"
+        sizes="180x180"
+      />
+      <link
+        rel="mask-icon"
+        href="/images/logo/logo_512x512.png"
+        color="#FFFFFF"
+      />
+      <meta name="description" content="This is a test web app" />
+      <meta name="msapplication-TileColor" content="#000000" />
+      <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
+      <!-- needed for media queries -->
+      <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1, minimum-scale=1"
+      />
+      <title data-i18n-key="title">{% block title %}{% endblock %}</title>
+    {% endblock %}
+  </head>
+
+  <body>
+    {% block body %}
+    {% endblock %}
+  </body>
+</html>

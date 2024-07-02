@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  h1 {
+    @apply text-4xl;
+  }
+}
+
+wallet-standard-list {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+wallet-standard-list > button {
+  display: flex;
+  align-items: center;
+  height: 3rem;
+  font-size: 1rem;
+}
+
+wallet-standard-list > button > img {
+  height: 75%;
+  margin-right: 1rem;
+}

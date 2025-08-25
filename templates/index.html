@@ -1,0 +1,25 @@
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="hero min-h-screen">
+  <div class="hero-content flex-col lg:flex-flow-reverse">
+    <div class="card shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
+      <form class="card-body" hx-post="/login" hx-trigger="submit">
+        <h2 class="card-title mb-4">Login</h2>
+
+        <div class="form-control">
+          <label class="label"><span class="label-text">RoomId</span></label>
+          <input type="text" name="username" placeholder="username" class="input input-bordered" required /> 
+        </div>
+        
+        <div class="form-control mt-6">
+          <button class="btn btn-primary">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

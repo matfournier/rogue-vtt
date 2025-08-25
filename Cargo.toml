@@ -1,42 +1,53 @@
 [package]
-name = "roguevtt-server"
+name = "rogue-vtt"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+path = "src/main.rs"
+name = "rogue-vtt"
 
 [dependencies]
-axum = { version = "0.6.19", features = ["ws"] }
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1"
-serde_repr = "0.1"
-tracing = { version = "0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tower-http = { version = "0.4.0", features = ["cors","compression-gzip","fs"] }
-uuid = {version = "1.4.1", features = [
-    "v4",                # Lets you generate random UUIDs
-    "serde"          # Use a faster (but still sufficiently random) RNG
-]}
-dashmap = "5.5.3"
-anyhow = "1.0.75"
-futures = "0.3.29"
-async-trait = "0.1.74"
-log = "0.4"
-env_logger = "0.10.1"
-config = "0.14.0"
-
-
-# Using table-like toml syntax to avoid a super-long line!
-[dependencies.sqlx] 
-version = "0.7.3" 
-default-features = false 
-features = [
-"runtime-tokio", 
-"tls-rustls",
-"macros",
-"postgres",
-"uuid",
-"chrono",
-"migrate"
-]
+anyhow = "1.0.95"
+argon2 = "0.5.3"
+askama = "0.12.1"
+async-trait = "0.1.86"
+axum = { version = "0.8.1", features = ["ws"] }
+axum-extra = { version = "0.10.0", features = ["typed-header"] }
+chrono = { version = "0.4.39", features = ["serde"] }
+config = "0.15.7"
+dashmap = "6.1.0"
+dotenvy = "0.15.7"
+futures = "0.3.31"
+futures-util = { version = "0.3.31", default-features = false, features = [
+  "sink",
+  "std",
+] }
+headers = "0.4.0"
+rand = "0.8.5"
+serde = "1.0.217"
+serde_json = "1.0.138"
+serde_repr = "0.1.19"
+serde_with = "3.12.0"
+sqlx = { version = "0.8.3", features = [
+  "runtime-tokio",
+  "postgres",
+  "uuid",
+  "chrono",
+  "migrate",
+] }
+tokio = { version = "1.43.0", features = ["full"] }
+tokio-tungstenite = "0.26.1"
+tower-http = { version = "0.6.2", features = [
+  "fs",
+  "compression-gzip",
+  "trace",
+  "timeout",
+] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+uuid = { version = "1.13.1", features = ["serde"] }
+validator = { version = "0.20", features = ["derive"] }

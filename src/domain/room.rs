@@ -10,6 +10,7 @@ pub struct RoomCreate {
     pub password: String,
 }
 
+#[derive(Deserialize)]
 pub struct Auth {
     pub id: Uuid,
     pub password: String,

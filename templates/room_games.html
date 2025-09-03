@@ -1,0 +1,63 @@
+<!-- templates/room_games.html -->
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mx-auto p-6">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold">Room: {{ room.name }}</h1>
+    <p class="text-gray-500">{{ room.id }}</p>
+  </div>
+
+  <!-- Add New Game Panel -->
+  <div class="card w-full mb-6 bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title">Create New Game</h2>
+      <form hx-post="/v1/rooms/{{ room.id }}/games" hx-target="#games-list" hx-swap="beforeend">
+        <div class="form-control w-full max-w-xs">
+          <label class="label">
+            <span class="label-text">Game Name</span>
+          </label>
+          <input type="text" name="name" placeholder="Enter game name" class="input input-bordered w-full max-w-xs" required />
+          <input type="hidden" name="room_id" value="{{ room.id }}" />
+        </div>
+        <div class="card-actions justify-end mt-4">
+          <button class="btn btn-primary">Add Game</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Games List -->
+  <div id="games-list" class="grid gap-4">
+    {% for game in games %}
+    <div class="card w-full bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title">{{ game.name }}</h2>
+        <p class="text-sm text-gray-500">Created: {{ game.created_at }}</p>
+        <div class="card-actions justify-end">
+          <button class="btn btn-primary">Launch Game</button>
+          <button class="btn btn-error" 
+                  hx-delete="/v1/games/{{ game.id }}" 
+                  hx-confirm="Are you sure you want to delete this game?"
+                  hx-target="closest .card"
+                  hx-swap="outerHTML">
+            Delete Game
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Empty state -->
+  {% if games.len() == 0 %}
+  <div class="text-center py-8">
+    <h3 class="text-xl text-gray-500">No games yet</h3>
+    <p class="text-gray-400">Create your first game using the form above</p>
+  </div>
+  {% endif %}
+
+</div>
+
+{% endblock %}

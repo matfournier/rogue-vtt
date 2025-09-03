@@ -5,8 +5,22 @@
 
 <div class="hero min-h-screen">
   <div class="hero-content flex-col lg:flex-flow-reverse">
+    <!-- Error message container - fixed height to prevent shifting -->
+    <div id="error-message" class="w-full max-w-sm h-20 flex items-start"></div>
+    
     <div class="card shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
-      <form class="card-body" hx-post="/login" hx-trigger="submit">
+      <form class="card-body" 
+            hx-post="/login" 
+            hx-trigger="submit"
+            hx-target="#error-message"
+            hx-on::before-request="
+              document.getElementById('error-message').innerHTML = '';
+            "
+            hx-on::response-error="
+              const errorDiv = document.getElementById('error-message');
+              errorDiv.innerHTML = event.detail.xhr.responseText;
+              console.log('Error response:', event.detail.xhr.responseText);
+            ">
         <h2 class="card-title mb-4">Login</h2>
 
         <div class="form-control">
@@ -16,7 +30,7 @@
 
         <div class="form-control">
           <label class="label"><span class="label-text">Room Key</span></label>
-          <input type="password" name="key" placeholder="Enter Room Key" class="input input-bordered" required /> 
+          <input type="password" name="password" placeholder="Enter Room Key" class="input input-bordered" required /> 
         </div>
         
         <div class="form-control mt-6">

@@ -40,8 +40,37 @@ impl From<Room> for RoomResponse {
     }
 }
 
+// Game models
 #[derive(Deserialize, Serialize, Validate)]
 pub struct GameCreate {
     #[validate(length(min = 1, max = 240))]
     pub name: String,
+    pub room_id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct Game {
+    pub id: Uuid,
+    pub name: String,
+    pub room_id: Uuid,
+    pub created_at: DateTime<chrono::Utc>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GameResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub room_id: Uuid,
+    pub created_at: DateTime<chrono::Utc>,
+}
+
+impl From<Game> for GameResponse {
+    fn from(game: Game) -> Self {
+        Self {
+            id: game.id,
+            name: game.name,
+            room_id: game.room_id,
+            created_at: game.created_at,
+        }
+    }
 }

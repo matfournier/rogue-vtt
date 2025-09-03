@@ -5,7 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 use tokio::signal;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::{routes::router, services::RoomService};
+use crate::{routes::router, services::{GameService, RoomService}};
 
 pub async fn serve() -> Result<()> {
     // Enable tracing.
@@ -33,7 +33,8 @@ pub async fn serve() -> Result<()> {
     );
 
     let room_service = Arc::new(RoomService::new(db.clone()));
-    let router = router::router(db, room_service);
+    let game_service = Arc::new(GameService::new(db.clone()));
+    let router = router::router(db, room_service, game_service);
     // run it
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8008")
         .await

@@ -13,18 +13,20 @@ use super::{
     base::{health, home},
     rooms::{create_game_form, create_room_handler},
 };
-use crate::services::RoomService;
+use crate::services::{GameService, RoomService};
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<PgPool>,
-    pub game_service: Arc<RoomService>,
+    pub room_service: Arc<RoomService>,
+    pub game_service: Arc<GameService>,
 }
 
-pub fn router(db: Arc<PgPool>, room_service: Arc<RoomService>) -> Router {
+pub fn router(db: Arc<PgPool>, room_service: Arc<RoomService>, game_service: Arc<GameService>) -> Router {
     let app_state = AppState {
         db,
-        game_service: room_service.clone(),
+        room_service: room_service.clone(),
+        game_service: game_service.clone(),
     };
 
     // build our application with a route

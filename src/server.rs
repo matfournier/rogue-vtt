@@ -1,10 +1,11 @@
-use anyhow::Result;
+use std::sync::Arc;
 
+use anyhow::Result;
 use sqlx::postgres::PgPoolOptions;
 use tokio::signal;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::routes::router;
+use crate::{routes::router, services::RoomService};
 
 pub async fn serve() -> Result<()> {
     // Enable tracing.
@@ -24,17 +25,19 @@ pub async fn serve() -> Result<()> {
     let database_url = dotenvy::var("DATABASE_URL").unwrap();
     // The error from `var()` doesn't mention the environment variable.
 
-    let db = PgPoolOptions::new()
-        .max_connections(20)
-        .connect(&database_url)
-        .await?;
+    let db = Arc::new(
+        PgPoolOptions::new()
+            .max_connections(10)
+            .connect(&database_url)
+            .await?,
+    );
 
-    let router = router::router(db);
+    let room_service = Arc::new(RoomService::new(db.clone()));
+    let router = router::router(db, room_service);
     // run it
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8008")
         .await
         .unwrap();
-    // println!("listening on {}", listener.local_addr().unwrap());
     tracing::info!("listening on {}", listener.local_addr().unwrap());
 
     axum::serve(listener, router)

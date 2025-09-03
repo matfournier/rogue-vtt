@@ -10,12 +10,20 @@
         <h2 class="card-title mb-4">Login</h2>
 
         <div class="form-control">
-          <label class="label"><span class="label-text">RoomId</span></label>
-          <input type="text" name="username" placeholder="username" class="input input-bordered" required /> 
+          <label class="label"><span class="label-text">Room ID</span></label>
+          <input type="text" name="id" placeholder="Enter Room ID" class="input input-bordered" required /> 
+        </div>
+
+        <div class="form-control">
+          <label class="label"><span class="label-text">Room Key</span></label>
+          <input type="password" name="key" placeholder="Enter Room Key" class="input input-bordered" required /> 
         </div>
         
         <div class="form-control mt-6">
-          <button class="btn btn-primary">Login</button>
+          <div class="flex gap-4">
+            <button class="btn btn-primary flex-1">Login</button>
+            <button type="button" class="btn btn-primary flex-1" hx-get="/v1/create_room" hx-target="#main-content">Create Room</button>
+          </div>
         </div>
       </form>
     </div>

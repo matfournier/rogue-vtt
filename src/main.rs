@@ -1,6 +1,7 @@
 mod domain;
 mod routes;
 mod server;
+mod services;
 mod util;
 
 use anyhow::Result;

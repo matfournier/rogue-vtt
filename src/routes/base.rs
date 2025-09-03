@@ -16,7 +16,7 @@ pub async fn health() -> Response {
 
 pub async fn home() -> impl IntoResponse {
     Askama(IndexTemplate {
-        title: "home".to_string(),
+        title: "RogueVTT".to_string(),
     })
 }
 

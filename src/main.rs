@@ -1,4 +1,5 @@
 mod domain;
+mod middleware;
 mod routes;
 mod server;
 mod services;

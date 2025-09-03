@@ -1,0 +1,44 @@
+<!-- templates/error.html - Standalone error page -->
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <script
+      src="https://unpkg.com/htmx.org@1.9.6"
+      integrity="sha384-FhXw7b6AlE/jyjlZH5iHa/tTe9EpJ1Y55RjcgPbjeWMskSxZt1v9qkxLJWNJaGni"
+      crossorigin="anonymous"
+    ></script>
+    <link rel="stylesheet" href="/assets/css/main.css" type="text/css" />
+    <title>Error - Rogue VTT</title>
+  </head>
+
+  <body class="min-h-screen bg-base-200">
+    <div class="hero min-h-screen">
+      <div class="hero-content text-center">
+        <div class="max-w-md">
+          <!-- Error icon -->
+          <div class="mb-8">
+            <svg class="w-24 h-24 mx-auto text-error" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.996-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>
+          </div>
+          
+          <!-- Error title -->
+          <h1 class="text-5xl font-bold text-error">Access Denied</h1>
+          
+          <!-- Error message -->
+          <p class="py-6 text-lg text-base-content">
+            {{ message }}
+          </p>
+          
+          <!-- Single Go Home button -->
+          <a href="/" class="btn btn-primary btn-lg">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m0 0V11a1 1 0 011-1h2a1 1 0 011 1v10m3 0a1 1 0 001-1V10m0 0l7-7"></path>
+            </svg>
+            Go Home
+          </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -41,6 +41,7 @@ sqlx = { version = "0.8.3", features = [
 ] }
 tokio = { version = "1.43.0", features = ["full"] }
 tokio-tungstenite = "0.26.1"
+tower-cookies = { version = "0.11.0", features = ["signed"] }
 tower-http = { version = "0.6.2", features = [
   "fs",
   "compression-gzip",
